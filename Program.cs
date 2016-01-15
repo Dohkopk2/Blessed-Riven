@@ -652,23 +652,19 @@ namespace BlessedRiven
                 Circle.Draw(Q.IsReady() && W.IsReady() ? green : red, 400, ObjectManager.Player.Position);
             if (DrawAlwaysR)
             {
-                Drawing.DrawText(heropos.X - 40, heropos.Y + 20, System.Drawing.Color.DodgerBlue, "Always R  (     )");
+                Drawing.DrawText(heropos.X - 40, heropos.Y + 20, System.Drawing.Color.Black, "Always R = ");
                 Drawing.DrawText(heropos.X + 32, heropos.Y + 20,
-                    AlwaysR ? System.Drawing.Color.LimeGreen : System.Drawing.Color.Red,
+                    AlwaysR ? System.Drawing.Color.IndianRed : System.Drawing.Color.LightGreen,
                     AlwaysR ? "On" : "Off");
             }
             if (DrawUseFastCombo)
             {
-                Drawing.DrawText(heropos.X - 40, heropos.Y + 33, System.Drawing.Color.DodgerBlue, "Hoola Logic  (     )");
+                Drawing.DrawText(heropos.X - 40, heropos.Y + 33, System.Drawing.Color.DodgerBlue, "Fast Combo = ");
                 Drawing.DrawText(heropos.X + 50, heropos.Y + 33,
-                    UseFastCombo ? System.Drawing.Color.LimeGreen : System.Drawing.Color.Red,
+                    UseFastCombo ? System.Drawing.Color.IndianRed : System.Drawing.Color.LightGreen,
                     UseFastCombo ? "On" : "Off");
             }
             
-            Drawing.DrawText(heropos.X - 40, heropos.Y + 43, System.Drawing.Color.DodgerBlue, "Can AA:");
-            Drawing.DrawText(heropos.X + 50, heropos.Y + 43,
-                    Orbwalker.CanAutoAttack ? System.Drawing.Color.LimeGreen : System.Drawing.Color.Red,
-                    Orbwalker.CanAutoAttack ? "true" : "false");
         }
 
         private static void Jungleclear()
