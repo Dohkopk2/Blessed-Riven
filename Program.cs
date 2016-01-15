@@ -202,6 +202,42 @@ namespace BlessedRiven
             Loading.OnLoadingComplete += OnGameLoad;
         }
 
+        public static void LaneClearAfterAa(Obj_AI_Base target)
+        {
+            var unitHp = target.Health - Player.Instance.GetAutoAttackDamage(target, true);
+            if (unitHp > 0)
+            {
+                if (clear["LaneQ"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+                {
+                    Player.CastSpell(SpellSlot.Q, target.Position);
+                    return;
+                }
+                if (clear["LaneW"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                    W.IsInRange(target))
+                {
+                    Player.CastSpell(SpellSlot.W);
+                    return;
+                }
+            }
+            else
+            {
+                System.Collections.Generic.List<Obj_AI_Minion> minions = EntityManager.MinionsAndMonsters.GetLaneMinions(EntityManager.UnitTeam.Enemy,
+                    Player.Instance.Position, Q.Range).Where(a => a.NetworkId != target.NetworkId).ToList();
+                if (clear["LaneQ"].Cast<CheckBox>().CurrentValue && Q.IsReady() && minions.Any())
+                {
+                    Player.CastSpell(SpellSlot.Q, minions[0].Position);
+                    return;
+                }
+                minions = minions.Where(a => a.Distance(Player.Instance) < W.Range).ToList();
+                if (clear["LaneW"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                    W.IsInRange(target) && minions.Any())
+                {
+                    Player.CastSpell(SpellSlot.W);
+                    return;
+                }
+            }
+        }
+
         //private static void Main() => CustomEvents.Game.OnGameLoad += OnGameLoad;
 
         private static void OnGameLoad(EventArgs args)
@@ -317,7 +353,7 @@ namespace BlessedRiven
                         if (Q.IsReady() && LaneQ)
                         {
                             ForceItem();
-                            Utils.DelayAction(() => ForceCastQ(Minions[0]), 200);
+                            Utils.DelayAction(() => ForceCastQ(Minions[0]), 1);
                         }
                         if ((!Q.IsReady() || (Q.IsReady() && !LaneQ)) && W.IsReady() && LaneW != 0 &&
                             Minions.Length >= LaneW)
@@ -358,6 +394,8 @@ namespace BlessedRiven
             //var spellName = args.SData.Name;
             if (!sender.IsMe || !args.SData.IsAutoAttack()) return;
             QTarget = (Obj_AI_Base) args.Target;
+
+
 
             if (args.Target is Obj_AI_Minion)
             {
@@ -513,8 +551,12 @@ namespace BlessedRiven
 
             clear = menu.AddSubMenu("Clear Settings", "clear");
             clear.Add("LaneQ", new CheckBox("Use Q LaneClear"));
-            clear.Add("LaneW", new Slider("Use W on {0} Minion", 4, 0, 6));
+            clear.Add("LaneW", new Slider("Use W on {0} Minion", 3, 0, 5));
             clear.Add("LaneE", new CheckBox("Use E Laneclear",false));
+            clear.AddSeparator();
+            clear.Add("JungleQ", new CheckBox("Use Q JungleClear"));
+            clear.Add("JungleW", new CheckBox("Use W JungleClear"));
+            clear.Add("JungleE", new CheckBox("Use E JungleClear"));
 
             misc = menu.AddSubMenu("Misc Settings", "misc");
             misc.Add("youmu", new CheckBox("Use Youmu"));
@@ -567,6 +609,7 @@ namespace BlessedRiven
 
         private static int TickLimiter = 1;
         private static int LastGameTick = 0;
+
         private static void OnTick(EventArgs args)
         {
             if (_Player.IsDead)
@@ -582,8 +625,9 @@ namespace BlessedRiven
             }
             if (BurstCombo) Burst();
             if (FastHarassCombo) FastHarass();
+            
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo)) Combo();
-            if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LaneClear)) Jungleclear();
+            if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LaneClear)) Jungleclear(); 
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass)) Harass();                 
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Flee)) Flee();
             if (LastQ + 3480 < Environment.TickCount && QStack < 3 && !_Player.IsRecalling() && KeepQ && Player.Instance.HasBuff("RivenTriCleaveBuff"))
@@ -659,7 +703,7 @@ namespace BlessedRiven
             }
             if (DrawUseFastCombo)
             {
-                Drawing.DrawText(heropos.X - 40, heropos.Y + 33, System.Drawing.Color.DodgerBlue, "Fast Combo = ");
+                Drawing.DrawText(heropos.X - 40, heropos.Y + 33, System.Drawing.Color.Black, "Fast Combo = ");
                 Drawing.DrawText(heropos.X + 50, heropos.Y + 33,
                     UseFastCombo ? System.Drawing.Color.IndianRed : System.Drawing.Color.LightGreen,
                     UseFastCombo ? "On" : "Off");
