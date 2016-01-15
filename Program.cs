@@ -317,7 +317,7 @@ namespace BlessedRiven
                         if (Q.IsReady() && LaneQ)
                         {
                             ForceItem();
-                            Utils.DelayAction(() => ForceCastQ(Minions[0]), 1);
+                            Utils.DelayAction(() => ForceCastQ(Minions[0]), 200);
                         }
                         if ((!Q.IsReady() || (Q.IsReady() && !LaneQ)) && W.IsReady() && LaneW != 0 &&
                             Minions.Length >= LaneW)
@@ -377,7 +377,7 @@ namespace BlessedRiven
                         if (Q.IsReady() && LaneQ)
                         {
                             ForceItem();
-                            Utils.DelayAction(() => ForceCastQ(Minions[0]), 1);
+                            Utils.DelayAction(() => ForceCastQ(Minions[0]), 200);
                         }
                         if ((!Q.IsReady() || (Q.IsReady() && !LaneQ)) && W.IsReady() && LaneW != 0 &&
                             Minions.Length >= LaneW)
@@ -423,7 +423,7 @@ namespace BlessedRiven
                     if (Q.IsReady())
                     {
                         ForceItem();
-                        Utils.DelayAction(() => ForceCastQ(target), 100);
+                        Utils.DelayAction(() => ForceCastQ(target), 300);
                     }
                     else if (W.IsReady() && InWRange(target))
                     {
@@ -445,12 +445,12 @@ namespace BlessedRiven
                     {
                         ForceItem();
                         Utils.DelayAction( ForceW, 1);
-                        Utils.DelayAction( () => ForceCastQ(target), 2);
+                        Utils.DelayAction( () => ForceCastQ(target), 300);
                     }
                     else if (Q.IsReady())
                     {
                         ForceItem();
-                        Utils.DelayAction(()=>ForceCastQ(target), 100);
+                        Utils.DelayAction(()=>ForceCastQ(target), 300);
                     }
                     else if (E.IsReady() && !ObjectManager.Player.IsInAutoAttackRange(target) && !InWRange(target))
                     {
@@ -469,7 +469,7 @@ namespace BlessedRiven
                     if (QStack == 2 && Q.IsReady())
                     {
                         ForceItem();
-                        Utils.DelayAction(() => ForceCastQ(target), 100);
+                        Utils.DelayAction(() => ForceCastQ(target), 300);
                     }
                 }
                 // todo: burst
@@ -489,7 +489,7 @@ namespace BlessedRiven
                     else if (Q.IsReady())
                     {
                         ForceItem();
-                        Utils.DelayAction(()=>ForceCastQ(target), 100);
+                        Utils.DelayAction(()=>ForceCastQ(target), 300);
                     }
                 }
                 
@@ -536,7 +536,7 @@ namespace BlessedRiven
 
             Skin = menu.AddSubMenu("Skin Changer", "SkinChanger");
             Skin.Add("checkSkin", new CheckBox("Use Skin Changer"));
-            Skin.Add("skin.Id", new Slider("Skin", 1, 0, 3));
+            Skin.Add("skin.Id", new Slider("Skin", 4, 0, 6));
 
             draw = menu.AddSubMenu("Draw Settings", "draw");
             draw.Add("DrawAlwaysR", new CheckBox("Draw R Status"));
@@ -717,7 +717,7 @@ namespace BlessedRiven
                     Player.CastSpell(SpellSlot.E, targetR.Position);
                     ForceR();
                     Utils.DelayAction(ForceW, 100);
-                    Utils.DelayAction(() => ForceCastQ(targetR), 100);
+                    Utils.DelayAction(() => ForceCastQ(targetR), 300);
                 }
             }
             else if (!UseHoola && R.IsReady() && R.Name == IsFirstR && W.IsReady() &&
@@ -739,7 +739,7 @@ namespace BlessedRiven
                     Utils.DelayAction(CastYoumoo, 1);
                     Utils.DelayAction(ForceItem, 10);
                     Utils.DelayAction(ForceW, 50);
-                    Utils.DelayAction(() => ForceCastQ(targetR), 150);
+                    Utils.DelayAction(() => ForceCastQ(targetR), 350);
                 }
             }
             else if (!UseHoola && W.IsReady() && E.IsReady())
@@ -764,7 +764,7 @@ namespace BlessedRiven
 
                 if (!targetR.IsValidTarget() || targetR.IsZombie) return;
                 Utils.DelayAction(ForceItem, 10);
-                Utils.DelayAction(() => ForceCastQ(targetR), 170);
+                Utils.DelayAction(() => ForceCastQ(targetR), 370);
             }
         }
 
@@ -790,7 +790,7 @@ namespace BlessedRiven
                     CastYoumoo();
                     Player.CastSpell(SpellSlot.E, target.Position);
                     ForceR();
-                    Utils.DelayAction(() => ForceCastQ(target), 1500);
+                    Utils.DelayAction(() => ForceCastQ(target), 350);
                     Utils.DelayAction(ForceW, 160);
                 }
                 else if (Flash.IsReady
@@ -829,7 +829,7 @@ namespace BlessedRiven
                 if (!target.IsValidTarget() || target.IsZombie) return;
                 if (!ObjectManager.Player.IsInAutoAttackRange(target) && !InWRange(target)) Player.CastSpell(SpellSlot.E, target.Position);
                 Utils.DelayAction(ForceItem, 10);
-                Utils.DelayAction(() => ForceCastQ(target), 150);
+                Utils.DelayAction(() => ForceCastQ(target), 350);
             }
         }
 
@@ -876,30 +876,30 @@ namespace BlessedRiven
             {
                 case "Spell1a":
                     LastQ = Environment.TickCount;
-                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None)) Utils.DelayAction(Reset, (QD * 10) + 180);
+                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None)) Utils.DelayAction(Reset, (QD * 10) + 380);
                     QStack = 2;
                     if (BurstCombo || Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.LastHit &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.Flee)
-                        Utils.DelayAction(Reset, (QD*10) + 180);
+                        Utils.DelayAction(Reset, (QD*10) + 380);
                     break;
                 case "Spell1b":
                     LastQ = Environment.TickCount;
-                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None)) Utils.DelayAction(Reset, (QD * 10) + 180);
+                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None)) Utils.DelayAction(Reset, (QD * 10) + 380);
                     QStack = 3;
                     if (BurstCombo || Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.LastHit &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.Flee)
-                        Utils.DelayAction(Reset, (QD*10) + 180);
+                        Utils.DelayAction(Reset, (QD*10) + 380);
                     break;
                 case "Spell1c":
                     LastQ = Environment.TickCount;
-                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None )) Utils.DelayAction(Reset, (QD * 10) + 145);
+                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None )) Utils.DelayAction(Reset, (QD * 10) + 450);
                     QStack = 1;
                     if (BurstCombo || Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.LastHit &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.Flee)
-                        Utils.DelayAction(Reset, (QLD*10) + 145);
+                        Utils.DelayAction(Reset, (QLD*10) + 450);
                     break;
                 case "Spell3":
                     if ((BurstCombo ||//Orbwalker.ActiveModesFlags == Orbwalker.ActiveModes.Burst ||
