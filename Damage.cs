@@ -2,9 +2,9 @@
 using EloBuddy;
 using EloBuddy.SDK;
 
-namespace BlessedRiven
+namespace Blessed_Riven
 {
-    internal class DamageHandler
+    class Damage
     {
         public static double ComboDamage(Obj_AI_Base target, bool noR = false)
         {
@@ -12,10 +12,10 @@ namespace BlessedRiven
             var passiveStacks = 0;
 
             dmg += Program.Q.IsReady()
-                ? QDamage(!noR) * (3 - Program.QStack)
+                ? QDamage(!noR) * (3 - Program.QCount)
                 : 0;
             passiveStacks += Program.Q.IsReady()
-                ? (3 - Program.QStack)
+                ? (3 - Program.QCount)
                 : 0;
 
             dmg += Program.W.IsReady()
