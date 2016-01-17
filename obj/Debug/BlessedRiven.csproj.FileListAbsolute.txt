@@ -1,2 +1,4 @@
 C:\Users\Mertss\Desktop\BlessedRiven\bin\Debug\BlessedRiven.exe.config
 C:\Users\Mertss\Desktop\buddy\BlessedRiven\bin\Debug\BlessedRiven.exe.config
+C:\Users\Mertss\Desktop\Blessed-Riven\bin\Debug\BlessedRiven.exe.config
+C:\Users\Mertss\Desktop\buddy\Blessed-Riven\bin\Debug\BlessedRiven.exe.config

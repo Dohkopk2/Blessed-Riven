@@ -245,7 +245,7 @@ namespace BlessedRiven
         public static void ComboAfterAa(Obj_AI_Base target)
         {
             if (Player.Instance.HasBuff("RivenFengShuiEngine") && R.IsReady() &&
-                combo["Combo.R2"].Cast<CheckBox>().CurrentValue)
+                combo["AlwaysR"].Cast<CheckBox>().CurrentValue)
             {
                 if (Player.Instance.CalculateDamageOnUnit(target, DamageType.Physical, DamageHandler.RDamage(target)) + Player.Instance.GetAutoAttackDamage(target, true) > target.Health)
                 {
@@ -253,7 +253,7 @@ namespace BlessedRiven
                     return;
                 }
             }
-            if (combo["Combo.W"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+            if (combo["ComboW"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
                 W.IsInRange(target))
             {
                 if (Hydra != null && Hydra.IsReady())
@@ -264,7 +264,7 @@ namespace BlessedRiven
                 Player.CastSpell(SpellSlot.W);
                 return;
             }
-            if (combo["Combo.Q"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+            if (combo["ComboQ"].Cast<CheckBox>().CurrentValue && Q.IsReady())
             {
                 Player.CastSpell(SpellSlot.Q, target.Position);
                 return;
@@ -292,9 +292,7 @@ namespace BlessedRiven
             Drawing.OnEndScene += Drawing_OnEndScene;
             Obj_AI_Base.OnProcessSpellCast += OnCast;
             Obj_AI_Base.OnSpellCast += OnDoCast;
-            Obj_AI_Base.OnSpellCast += OnDoCastLC;
             Obj_AI_Base.OnPlayAnimation += OnPlay;
-            Obj_AI_Base.OnProcessSpellCast += OnCasting;
         }
 
         //Interrupter2.OnInterruptableTarget += Interrupt;
@@ -365,48 +363,7 @@ namespace BlessedRiven
             }
         }
 
-        private static void OnDoCastLC(Obj_AI_Base Sender, GameObjectProcessSpellCastEventArgs args)
-        {
-            if (_Player.IsDead)
-                return;
-            if (!Sender.IsMe || !args.SData.IsAutoAttack()) return;
-            QTarget = (Obj_AI_Base) args.Target;
-            if (args.Target is Obj_AI_Minion)
-            {
-                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LaneClear))
-                {
-                    var Minions = EntityManager.MinionsAndMonsters.GetLaneMinions(EntityManager.UnitTeam.Enemy, ObjectManager.Player.Position, 190).ToArray();
-                    if (Minions.Length > 0)
-                    {
 
-
-                        if (HasTitan())
-                        {
-                            CastTitan();
-                            return;
-                        }
-                        if (Q.IsReady() && LaneQ)
-                        {
-                            ForceItem();
-                            Utils.DelayAction(() => ForceCastQ(Minions[0]), 1);
-                        }
-                        if ((!Q.IsReady() || (Q.IsReady() && !LaneQ)) && W.IsReady() && LaneW != 0 &&
-                            Minions.Length >= LaneW)
-                        {
-                            ForceItem();
-                            Utils.DelayAction(ForceW, 1);
-                        }
-                        if ((!Q.IsReady() || (Q.IsReady() && !LaneQ)) &&
-                            (!W.IsReady() || (W.IsReady() && LaneW == 0) || Minions.Length < LaneW) &&
-                            E.IsReady() && LaneE)
-                        {
-                            Player.CastSpell(SpellSlot.E, Minions[0].Position);
-                            Utils.DelayAction(ForceItem, 1);
-                        }
-                    }
-                }
-            }
-        }
         
         private static Item HasHydra()
         {
@@ -424,148 +381,132 @@ namespace BlessedRiven
         //private static  => Items.CanUseItem(3077) && Items.HasItem(3077) ? 3077 : Items.CanUseItem(3074) && Items.HasItem(3074) ? 3074 : 0;
         private static void OnDoCast(Obj_AI_Base sender, GameObjectProcessSpellCastEventArgs args)
         {
-            if (_Player.IsDead)
-                return;
-            //var spellName = args.SData.Name;
-            if (!sender.IsMe || !args.SData.IsAutoAttack()) return;
-            QTarget = (Obj_AI_Base) args.Target;
+            if (!sender.IsMe) return;
+            var target = args.Target as Obj_AI_Base;
 
-
-
-            if (args.Target is Obj_AI_Minion)
+            // Hydra
+            if (args.SData.Name.ToLower().Contains("itemtiamatcleave"))
             {
-                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.JungleClear))
+                Orbwalker.ResetAutoAttack();
+                if (W.IsReady())
                 {
-                    var Minions = EntityManager.MinionsAndMonsters.Monsters.Where(
-                    m => m.Distance(ObjectManager.Player) < 250 + _Player.AttackRange + 70).ToArray();
-                    if (Minions.Length > 0)
+                    var target2 = TargetSelector.GetTarget(W.Range, DamageType.Physical);
+                    if (target2 != null || Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None)
                     {
+                        Player.CastSpell(SpellSlot.W);
+                    }
+                }
+                return;
+            }
 
-
-                        if (HasTitan())
+            //W
+            if (args.SData.Name.ToLower().Contains(W.Name.ToLower()))
+            {
+                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
+                {
+                    if (Player.Instance.HasBuff("RivenFengShuiEngine") && R.IsReady() &&
+                        combo["AlwaysR"].Cast<CheckBox>().CurrentValue)
+                    {
+                        var target2 = TargetSelector.GetTarget(R.Range, DamageType.Physical);
+                        if (target2 != null &&
+                            (target2.Distance(Player.Instance) < W.Range &&
+                             target2.Health >
+                             Player.Instance.CalculateDamageOnUnit(target2, DamageType.Physical, DamageHandler.WDamage()) ||
+                             target2.Distance(Player.Instance) > W.Range) &&
+                            Player.Instance.CalculateDamageOnUnit(target2, DamageType.Physical,
+                                DamageHandler.RDamage(target2) + DamageHandler.WDamage()) > target2.Health)
                         {
-                            CastTitan();
+                            R.Cast(target2);
+                        }
+                    }
+                }
+
+                target = (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo) ||
+                          Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass))
+                    ? TargetSelector.GetTarget(E.Range + W.Range, DamageType.Physical)
+                    : (Obj_AI_Base)Orbwalker.LastTarget;
+                if (Q.IsReady() && Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None && target != null)
+                {
+                    Player.CastSpell(SpellSlot.Q, target.Position);
+                    return;
+                }
+                return;
+            }
+
+            //E
+            if (args.SData.Name.ToLower().Contains(E.Name.ToLower()))
+            {
+                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
+                {
+                    if (Player.Instance.HasBuff("RivenFengShuiEngine") && R.IsReady() &&
+                        combo["AlwaysR"].Cast<CheckBox>().CurrentValue)
+                    {
+                        var target2 = TargetSelector.GetTarget(R.Range, DamageType.Physical);
+                        if (target2 != null &&
+                            Player.Instance.CalculateDamageOnUnit(target2, DamageType.Physical,
+                                (DamageHandler.RDamage(target2))) > target2.Health)
+                        {
+                            R.Cast(target2);
                             return;
                         }
-                        if (Q.IsReady() && LaneQ)
-                        {
-                            ForceItem();
-                            Utils.DelayAction(() => ForceCastQ(Minions[0]), 200);
-                        }
-                        if ((!Q.IsReady() || (Q.IsReady() && !LaneQ)) && W.IsReady() && LaneW != 0 &&
-                            Minions.Length >= LaneW)
-                        {
-                            ForceItem();
-                            Utils.DelayAction(ForceW, 1);
-                        }
-                        if ((!Q.IsReady() || (Q.IsReady() && !LaneQ)) &&
-                            (!W.IsReady() || (W.IsReady() && LaneW == 0) || Minions.Length < LaneW) &&
-                            E.IsReady() && LaneE)
-                        {
-                            Player.CastSpell(SpellSlot.E, Minions[0].Position);
-                            Utils.DelayAction(ForceItem, 1);
-                        }
+                    }
+                    if ((R.Name != IsFirstR) && R.IsReady() &&
+                        !Player.Instance.HasBuff("RivenFengShuiEngine") &&
+                        combo["AlwaysR"].Cast<CheckBox>().CurrentValue)
+                    {
+                        Player.CastSpell(SpellSlot.R);
+                    }
+                    target = TargetSelector.GetTarget(W.Range, DamageType.Physical);
+                    if (target != null && Player.Instance.Distance(target) < W.Range)
+                    {
+                        Player.CastSpell(SpellSlot.W);
+                        return;
                     }
                 }
             }
-    
-            if (args.Target is Obj_AI_Turret || args.Target is Obj_Barracks || args.Target is Obj_BarracksDampener ||
-                args.Target is Obj_Building)
-                if (args.Target.IsValid && args.Target != null && Q.IsReady() && LaneQ &&
-                    Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LaneClear))
-                    ForceCastQ((Obj_AI_Base) args.Target);
-            AIHeroClient client = args.Target as AIHeroClient;
-            if (client != null)
+
+            //Q
+            if (args.SData.Name.ToLower().Contains(Q.Name.ToLower()))
             {
-                var target = client;
-                if (!target.IsValidTarget()) return;
-                if (KillstealR && R.IsReady() && R.Name == IsSecondR)
-                    if (target.Health < (Rdame(target, target.Health) + _Player.GetAutoAttackDamage(target)) &&
-                        target.Health > _Player.GetAutoAttackDamage(target)) R.Cast(target.Position);
-                if (KillstealW && W.IsReady())
-                    if (target.Health <
-                        (_Player.GetSpellDamage(target, SpellSlot.W)) + _Player.GetAutoAttackDamage(target) &&
-                        target.Health > _Player.GetAutoAttackDamage(target)) W.Cast();
                 if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
                 {
-                    if (HasTitan())
+                    if (Player.Instance.HasBuff("RivenFengShuiEngine") && R.IsReady() &&
+                        combo["AlwaysR"].Cast<CheckBox>().CurrentValue)
                     {
-                        CastTitan();
-                        return;
-                    }
-                    if (Q.IsReady())
-                    {
-                        ForceItem();
-                        Utils.DelayAction(() => ForceCastQ(target), 300);
-                    }
-                    else if (W.IsReady() && InWRange(target))
-                    {
-                        ForceItem();
-                        Utils.DelayAction(ForceW, 1);
-                    }
-                    else if (E.IsReady() && _Player.IsInAutoAttackRange(target)) Player.CastSpell(SpellSlot.E, target.Position);
-                }
-                // todo: fast harass
-                
-                if (FastHarassCombo)
-                {
-                    if (HasTitan())
-                    {
-                        CastTitan();
-                        return;
-                    }
-                    if (W.IsReady() && InWRange(target))
-                    {
-                        ForceItem();
-                        Utils.DelayAction( ForceW, 1);
-                        Utils.DelayAction( () => ForceCastQ(target), 300);
-                    }
-                    else if (Q.IsReady())
-                    {
-                        ForceItem();
-                        Utils.DelayAction(()=>ForceCastQ(target), 300);
-                    }
-                    else if (E.IsReady() && !ObjectManager.Player.IsInAutoAttackRange(target) && !InWRange(target))
-                    {
-                        EloBuddy.Player.CastSpell(SpellSlot.E, target.Position);
+                        var target2 = TargetSelector.GetTarget(R.Range, DamageType.Physical);
+                        if (target2 != null &&
+                            (target2.Distance(Player.Instance) < 300 &&
+                             target2.Health >
+                             Player.Instance.CalculateDamageOnUnit(target2, DamageType.Physical, DamageHandler.QDamage()) ||
+                             target2.Distance(Player.Instance) > 300) &&
+                            Player.Instance.CalculateDamageOnUnit(target2, DamageType.Physical,
+                                DamageHandler.RDamage(target2) + DamageHandler.QDamage()) > target2.Health)
+                        {
+                            R.Cast(target2);
+                        }
                     }
                 }
-                
+                return;
+            }
 
-                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass))
-                {
-                    if (HasTitan())
+            if (args.SData.IsAutoAttack() && target != null)
+            {
+               
+                    if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
                     {
-                        CastTitan();
-                        return;
+                        ComboAfterAa(target);
                     }
-                    if (QStack == 2 && Q.IsReady())
+
+                    if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass))
                     {
-                        ForceItem();
-                        Utils.DelayAction(() => ForceCastQ(target), 300);
+                        HarassAfterAa(target);
                     }
-                }
-                // todo: burst
-                
-                if (BurstCombo)
-                {
-                    if (HasTitan())
+
+                    if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LaneClear) && target.IsMinion())
                     {
-                        CastTitan();
-                        return;
+                        LaneClearAfterAa(target);
                     }
-                    if (R.IsReady() && R.Name == IsSecondR)
-                    {
-                        ForceItem();
-                        Utils.DelayAction(ForceR2, 1);
-                    }
-                    else if (Q.IsReady())
-                    {
-                        ForceItem();
-                        Utils.DelayAction(()=>ForceCastQ(target), 300);
-                    }
-                }
-                
+                                           
             }
         }
 
@@ -608,7 +549,7 @@ namespace BlessedRiven
             misc.Add("killstealr", new CheckBox("Killsteal Second R"));
             misc.Add("AutoShield", new CheckBox("Incoming Damage to Auto Cast E"));
             misc.Add("Shield", new CheckBox("Auto Cast E While LastHit"));
-            misc.Add("KeepQ", new CheckBox("Keep Q Alive"));
+            misc.Add("KeepQ", new CheckBox("Keep Q Alive",false));
             misc.Add("QD", new Slider("First,Second Q Delay {0}", 29, 23, 43));
             misc.Add("QLD", new Slider("Third Q Delay {0}", 39, 36, 53));
 
@@ -669,11 +610,13 @@ namespace BlessedRiven
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LaneClear)) Jungleclear(); 
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass)) Harass();                 
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Flee)) Flee();
-            if (LastQ + 3480 < Environment.TickCount && QStack < 3 && !_Player.IsRecalling() && KeepQ && Player.Instance.HasBuff("RivenTriCleaveBuff"))
+            if (combo["Alive.Q"].Cast<CheckBox>().CurrentValue && !Player.Instance.IsRecalling() && QStack < 3 && LastQ + 3480 < Environment.TickCount && Player.Instance.HasBuff("RivenTriCleaveBuff"))
+            {
                 Player.CastSpell(SpellSlot.Q,
                     Orbwalker.LastTarget != null && Orbwalker.LastAutoAttack - Environment.TickCount < 3000
                         ? Orbwalker.LastTarget.Position
                         : Game.CursorPos);
+            }
         }
 
         private static void Killsteal()
@@ -764,7 +707,7 @@ namespace BlessedRiven
             {
                 Player.CastSpell(SpellSlot.E, mob.Position);
                 Utils.DelayAction(ForceItem, 1);
-                Utils.DelayAction(ForceW, 100);
+                Utils.DelayAction(ForceW, 1);
 
             }
             
@@ -801,7 +744,7 @@ namespace BlessedRiven
                     Player.CastSpell(SpellSlot.E, targetR.Position);
                     ForceR();
                     Utils.DelayAction(ForceW, 1);
-                    Utils.DelayAction(() => ForceCastQ(targetR), 1);
+                    Utils.DelayAction(() => ForceCastQ(targetR), 220);
                 }
             }
             else if (!UseFastCombo && R.IsReady() && R.Name == IsFirstR && W.IsReady() &&
@@ -823,7 +766,7 @@ namespace BlessedRiven
                     Utils.DelayAction(CastYoumoo, 1);
                     Utils.DelayAction(ForceItem, 1);
                     Utils.DelayAction(ForceW, 1);
-                    Utils.DelayAction(() => ForceCastQ(targetR), 1);
+                    Utils.DelayAction(() => ForceCastQ(targetR), 220);
                 }
             }
             else if (!UseFastCombo && W.IsReady() && E.IsReady())
@@ -848,7 +791,7 @@ namespace BlessedRiven
 
                 if (!targetR.IsValidTarget() || targetR.IsZombie) return;
                 Utils.DelayAction(ForceItem, 1);
-                Utils.DelayAction(() => ForceCastQ(targetR), 1);
+                Utils.DelayAction(() => ForceCastQ(targetR), 220);
             }
         }
 
@@ -874,7 +817,7 @@ namespace BlessedRiven
                     CastYoumoo();
                     Player.CastSpell(SpellSlot.E, target.Position);
                     ForceR();
-                    Utils.DelayAction(() => ForceCastQ(target), 1);
+                    Utils.DelayAction(() => ForceCastQ(target), 220);
                     Utils.DelayAction(ForceW, 1);
                 }
                 else if (Flash.IsReady
@@ -913,7 +856,7 @@ namespace BlessedRiven
                 if (!target.IsValidTarget() || target.IsZombie) return;
                 if (!ObjectManager.Player.IsInAutoAttackRange(target) && !InWRange(target)) Player.CastSpell(SpellSlot.E, target.Position);
                 Utils.DelayAction(ForceItem, 10);
-                Utils.DelayAction(() => ForceCastQ(target), 1);
+                Utils.DelayAction(() => ForceCastQ(target), 220);
             }
         }
 
@@ -934,7 +877,7 @@ namespace BlessedRiven
                 var epos = _Player.ServerPosition +
                            (_Player.ServerPosition - target.ServerPosition).Normalized()*300;
                 Player.CastSpell(SpellSlot.E, epos);
-                Utils.DelayAction(() => Player.CastSpell(SpellSlot.Q, epos), 1);
+                Utils.DelayAction(() => Player.CastSpell(SpellSlot.Q, epos), 220);
             }
         }
 
@@ -960,30 +903,33 @@ namespace BlessedRiven
             {
                 case "Spell1a":
                     LastQ = Environment.TickCount;
-                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None)) Utils.DelayAction(Reset, 291 - Game.Ping);
+                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None)) Orbwalker.ResetAutoAttack();  Utils.DelayAction(Reset, 291 - Game.Ping);
                     QStack = 2;
                     if (BurstCombo || Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.LastHit &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.Flee)
-                        Utils.DelayAction(Reset, 291 - Game.Ping);
+                        Orbwalker.ResetAutoAttack();
+                    Utils.DelayAction(Reset, 291 - Game.Ping);
                     break;
                 case "Spell1b":
                     LastQ = Environment.TickCount;
-                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None)) Utils.DelayAction(Reset, 291 - Game.Ping);
+                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None)) Orbwalker.ResetAutoAttack(); Utils.DelayAction(Reset, 291 - Game.Ping);
                     QStack = 3;
                     if (BurstCombo || Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.LastHit &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.Flee)
-                        Utils.DelayAction(Reset, 291 - Game.Ping);
+                        Orbwalker.ResetAutoAttack();
+                    Utils.DelayAction(Reset, 291 - Game.Ping);
                     break;
                 case "Spell1c":
                     LastQ = Environment.TickCount;
-                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None )) Utils.DelayAction(Reset, 393 - Game.Ping);
+                    if (Qstrange && (Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None )) Orbwalker.ResetAutoAttack(); Utils.DelayAction(Reset, 393 - Game.Ping);
                     QStack = 1;
                     if (BurstCombo || Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.LastHit &&
                         Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.Flee)
-                        Utils.DelayAction(Reset, 393 - Game.Ping);
+                        Orbwalker.ResetAutoAttack();
+                    Utils.DelayAction(Reset, 393 - Game.Ping);
                     break;
                 case "Spell3":
                     if ((BurstCombo ||//Orbwalker.ActiveModesFlags == Orbwalker.ActiveModes.Burst ||
@@ -1002,7 +948,6 @@ namespace BlessedRiven
                     if (Q.IsReady() && target.IsValidTarget()) ForceCastQ(target);
                     break;
                 
-                //Chat.Print(args.Animation);
             }
         }
 
@@ -1098,6 +1043,210 @@ namespace BlessedRiven
                         return;
                     }
                 }
+                if (!sender.IsEnemy || sender.Type != _Player.Type ||
+                (!AutoShield && (!Shield || Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.LastHit)))
+                    return;
+                var epos = _Player.ServerPosition +
+                           (_Player.ServerPosition - sender.ServerPosition).Normalized() * 300;
+
+                if (!sender.IsMe) return;
+
+                if (args.SData.Name.ToLower().Contains(W.Name.ToLower()))
+                {
+                    LastW = Environment.TickCount;
+                    return;
+                }
+                if (args.SData.Name.ToLower().Contains(Q.Name.ToLower()))
+                {
+                    LastQ = Environment.TickCount;
+                    if (!combo["Alive.Q"].Cast<CheckBox>().CurrentValue) return;
+                    Core.DelayAction(() =>
+                    {
+                        if (!Player.Instance.IsRecalling() && QStack < 2)
+                        {
+                            Player.CastSpell(SpellSlot.Q,
+                                Orbwalker.LastTarget != null && Orbwalker.LastAutoAttack - Environment.TickCount < 3000
+                                    ? Orbwalker.LastTarget.Position
+                                    : Game.CursorPos);
+                        }
+                    }, 3480);
+                    return;
+                }
+
+                if (!(_Player.Distance(sender.ServerPosition) <= args.SData.CastRange)) return;
+                switch (args.SData.TargettingType)
+                {
+                    case SpellDataTargetType.Unit:
+
+                        if (args.Target.NetworkId == _Player.NetworkId)
+                        {
+                            if (Orbwalker.ActiveModesFlags == Orbwalker.ActiveModes.LastHit &&
+                                !args.SData.Name.Contains("NasusW"))
+                            {
+                                if (E.IsReady()) Player.CastSpell(SpellSlot.E, epos);
+                            }
+                        }
+
+                        break;
+                    case SpellDataTargetType.SelfAoe:
+
+                        if (Orbwalker.ActiveModesFlags == Orbwalker.ActiveModes.LastHit)
+                        {
+                            if (E.IsReady()) Player.CastSpell(SpellSlot.E, epos);
+                        }
+
+                        break;
+                }
+                if (args.SData.Name.Contains("IreliaEquilibriumStrike"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (W.IsReady() && InWRange(sender)) W.Cast();
+                        else if (E.IsReady()) Player.CastSpell(SpellSlot.E, epos);
+                    }
+                }
+                if (args.SData.Name.Contains("TalonCutthroat"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (W.IsReady()) W.Cast();
+                    }
+                }
+                if (args.SData.Name.Contains("RenektonPreExecute"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (W.IsReady()) W.Cast();
+                    }
+                }
+                if (args.SData.Name.Contains("GarenRPreCast"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, epos);
+                    }
+                }
+                if (args.SData.Name.Contains("GarenQAttack"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("XenZhaoThrust3"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (W.IsReady()) W.Cast();
+                    }
+                }
+                if (args.SData.Name.Contains("RengarQ"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("RengarPassiveBuffDash"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("RengarPassiveBuffDashAADummy"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("TwitchEParticle"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("FizzPiercingStrike"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("HungeringStrike"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("YasuoDash"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("KatarinaRTrigger"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (W.IsReady() && InWRange(sender)) W.Cast();
+                        else if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("YasuoDash"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("KatarinaE"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (W.IsReady()) W.Cast();
+                    }
+                }
+                if (args.SData.Name.Contains("MonkeyKingQAttack"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("MonkeyKingSpinToWin"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                        else if (W.IsReady()) W.Cast();
+                    }
+                }
+                if (args.SData.Name.Contains("MonkeyKingQAttack"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("MonkeyKingQAttack"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
+                if (args.SData.Name.Contains("MonkeyKingQAttack"))
+                {
+                    if (args.Target.NetworkId == _Player.NetworkId)
+                    {
+                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
+                    }
+                }
             }
 
             //Q
@@ -1170,8 +1319,7 @@ namespace BlessedRiven
         }
 
         private static void Reset()
-        {
-            
+        {           
             Player.DoEmote(Emote.Dance);
             Orbwalker.ResetAutoAttack();
         }
@@ -1191,7 +1339,6 @@ namespace BlessedRiven
             if (QTarget == null || !QTarget.IsValidTarget()) return;
             if (forceR && R.Name == IsFirstR)
             {
-                //Chat.Print("trying to use R");
                 Player.CastSpell(SpellSlot.R);
                 return;
             }
@@ -1225,7 +1372,6 @@ namespace BlessedRiven
         private static void ForceR()
         {
             forceR = (R.IsReady() && R.Name == IsFirstR);
-            //Chat.Print(forceR);
             Utils.DelayAction(() => forceR = false, 1);
         }
 
@@ -1253,8 +1399,8 @@ namespace BlessedRiven
             var target = TargetSelector.SelectedTarget;
             if (target != null && target.IsValidTarget() && !target.IsZombie)
             {
-                W.Cast();
-                Utils.DelayAction(() => _Player.Spellbook.CastSpell(Flash.Slot, target.Position), 10);
+                Utils.DelayAction(() => _Player.Spellbook.CastSpell(Flash.Slot, target.Position), 1);
+                W.Cast();              
             }
         }
 
@@ -1264,213 +1410,6 @@ namespace BlessedRiven
             var youmu = ObjectManager.Player.InventoryItems.FirstOrDefault(it => it.Id == ItemId.Youmuus_Ghostblade);
        
             if (youmu != null && youmu.CanUseItem()) youmu.Cast();
-        }
-
-        private static void OnCasting(Obj_AI_Base sender, GameObjectProcessSpellCastEventArgs args)
-        {
-            if (!sender.IsEnemy || sender.Type != _Player.Type ||
-                (!AutoShield && (!Shield || Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.LastHit))) return;
-            var epos = _Player.ServerPosition +
-                       (_Player.ServerPosition - sender.ServerPosition).Normalized()*300;
-
-            if (!sender.IsMe) return;
-
-            if (args.SData.Name.ToLower().Contains(W.Name.ToLower()))
-            {
-                LastW = Environment.TickCount;
-                return;
-            }
-            if (args.SData.Name.ToLower().Contains(Q.Name.ToLower()))
-            {
-                LastQ = Environment.TickCount;
-                if (!combo["Alive.Q"].Cast<CheckBox>().CurrentValue) return;
-                Core.DelayAction(() =>
-                {
-                    if (!Player.Instance.IsRecalling() && QStack < 2)
-                    {
-                        Player.CastSpell(SpellSlot.Q,
-                            Orbwalker.LastTarget != null && Orbwalker.LastAutoAttack - Environment.TickCount < 3000
-                                ? Orbwalker.LastTarget.Position
-                                : Game.CursorPos);
-                    }
-                }, 3480);
-                return;
-            }
-
-            if (!(_Player.Distance(sender.ServerPosition) <= args.SData.CastRange)) return;
-            switch (args.SData.TargettingType)
-            {
-                case SpellDataTargetType.Unit:
-
-                    if (args.Target.NetworkId == _Player.NetworkId)
-                    {
-                        if (Orbwalker.ActiveModesFlags == Orbwalker.ActiveModes.LastHit &&
-                            !args.SData.Name.Contains("NasusW"))
-                        {
-                            if (E.IsReady()) Player.CastSpell(SpellSlot.E, epos);
-                        }
-                    }
-
-                    break;
-                case SpellDataTargetType.SelfAoe:
-
-                    if (Orbwalker.ActiveModesFlags == Orbwalker.ActiveModes.LastHit)
-                    {
-                        if (E.IsReady()) Player.CastSpell(SpellSlot.E, epos);
-                    }
-
-                    break;
-            }
-            if (args.SData.Name.Contains("IreliaEquilibriumStrike"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (W.IsReady() && InWRange(sender)) W.Cast();
-                    else if (E.IsReady()) Player.CastSpell(SpellSlot.E, epos);
-                }
-            }
-            if (args.SData.Name.Contains("TalonCutthroat"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (W.IsReady()) W.Cast();
-                }
-            }
-            if (args.SData.Name.Contains("RenektonPreExecute"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (W.IsReady()) W.Cast();
-                }
-            }
-            if (args.SData.Name.Contains("GarenRPreCast"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, epos);
-                }
-            }
-            if (args.SData.Name.Contains("GarenQAttack"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("XenZhaoThrust3"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (W.IsReady()) W.Cast();
-                }
-            }
-            if (args.SData.Name.Contains("RengarQ"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("RengarPassiveBuffDash"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("RengarPassiveBuffDashAADummy"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("TwitchEParticle"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("FizzPiercingStrike"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("HungeringStrike"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("YasuoDash"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("KatarinaRTrigger"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (W.IsReady() && InWRange(sender)) W.Cast();
-                    else if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("YasuoDash"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("KatarinaE"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (W.IsReady()) W.Cast();
-                }
-            }
-            if (args.SData.Name.Contains("MonkeyKingQAttack"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("MonkeyKingSpinToWin"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                    else if (W.IsReady()) W.Cast();
-                }
-            }
-            if (args.SData.Name.Contains("MonkeyKingQAttack"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("MonkeyKingQAttack"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
-            if (args.SData.Name.Contains("MonkeyKingQAttack"))
-            {
-                if (args.Target.NetworkId == _Player.NetworkId)
-                {
-                    if (E.IsReady()) Player.CastSpell(SpellSlot.E, Game.CursorPos);
-                }
-            }
         }
 
         private static double basicdmg(Obj_AI_Base target)
