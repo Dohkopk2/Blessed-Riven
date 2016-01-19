@@ -11,10 +11,11 @@ using EloBuddy.SDK.Menu.Values;
 using EloBuddy.SDK.Rendering;
 using Color = System.Drawing.Color;
 using EloBuddy.SDK.Constants;
+using SharpDX;
 
 namespace Blessed_Riven
 {
-    class Program
+    internal class Program
     {
         public static Spell.Active Q = new Spell.Active(SpellSlot.Q, 300);
         public static Spell.Active E = new Spell.Active(SpellSlot.E, 325);
@@ -37,7 +38,7 @@ namespace Blessed_Riven
         public static int LastCastW;
         public static int QCount;
         static Spell.Targeted Smite = null;
-        public static Menu Menu, FarmingMenu, MiscMenu, DrawMenu, HarassMenu, ComboMenu, SmiteMenu, Skin;
+        public static Menu Menu, FarmingMenu, MiscMenu, DrawMenu, HarassMenu, ComboMenu, SmiteMenu, Skin, ShieldMenu, DelayMenu;
         static Item Healthpot;
         public static SpellSlot SmiteSlot = SpellSlot.Unknown;
         public static SpellSlot IgniteSlot = SpellSlot.Unknown;
@@ -47,17 +48,19 @@ namespace Blessed_Riven
         private static readonly int[] SmiteBlue = { 3706, 3710, 3709, 3708, 3707 };
         private static SpellDataInst Flash;
         private static Spell.Targeted _ignite;
-        
+
 
 
         static void Main(string[] args)
         {
             Loading.OnLoadingComplete += Loading_OnLoadingComplete;
+
         }
 
         public static AIHeroClient _Player
         {
             get { return ObjectManager.Player; }
+
 
         }
 
@@ -85,8 +88,6 @@ namespace Blessed_Riven
         {
             if (Player.Instance.ChampionName != "Riven")
                 return;
-
-
             Bootstrap.Init(null);
             SpellDataInst smite = _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).Any() ? _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).First() : null;
             if (smite != null)
@@ -97,25 +98,25 @@ namespace Blessed_Riven
             _ignite = new Spell.Targeted(ObjectManager.Player.GetSpellSlotFromName("summonerdot"), 600);
             Menu = MainMenu.AddMenu("Blessed Riven", "BlessedRiven");
             Flash = ObjectManager.Player.Spellbook.Spells.FirstOrDefault(a => a.Name.ToLower().Contains("summonerflash"));
-            Chat.Print("Blessed Riven Loaded.", System.Drawing.Color.Brown);       
+            Chat.Print("Blessed Riven Loaded.", System.Drawing.Color.Brown);
 
-            ComboMenu = Menu.AddSubMenu("Combo Settings","ComboSettings");            
+            ComboMenu = Menu.AddSubMenu("Combo Settings", "ComboSettings");
             ComboMenu.AddLabel("Combo Settings");
             ComboMenu.Add("QCombo", new CheckBox("Use Q"));
             ComboMenu.Add("WCombo", new CheckBox("Use W"));
             ComboMenu.Add("ECombo", new CheckBox("Use E"));
-            ComboMenu.Add("RCombo", new CheckBox("Use R"));            
+            ComboMenu.Add("RCombo", new CheckBox("Use R"));
             ComboMenu.Add("R2Combo", new CheckBox("Use R2(enemy killable)"));
             ComboMenu.Add("FlashW", new KeyBind("Flash W", false, KeyBind.BindTypes.HoldActive, '5'));
-            ComboMenu.Add("FlashBurst", new KeyBind("Burst(broken)", false, KeyBind.BindTypes.HoldActive, 'G'));           
+            ComboMenu.Add("FlashBurst", new KeyBind("Burst(broken)", false, KeyBind.BindTypes.HoldActive, 'G'));
             ComboMenu.AddLabel("Burst = Select Target And Burst Key");
             ComboMenu.AddLabel("The flash has usesh");
             ComboMenu.AddLabel("If not perform without a flash");
             ComboMenu.Add("ForcedR", new KeyBind("Forced R", true, KeyBind.BindTypes.PressToggle, 'Z'));
             ComboMenu.Add("useTiamat", new CheckBox("Use Items"));
             ComboMenu.AddLabel("R Settings");
-            ComboMenu.Add("RCantKill", new CheckBox("Cant Kill with Combo"));
-            ComboMenu.Add("REnemyCount", new Slider("Enemy Count >= ", 1, 0, 4));
+            ComboMenu.Add("RCantKill", new CheckBox("Cant Kill with Combo", false));
+            ComboMenu.Add("REnemyCount", new Slider("Enemy Count >= ", 0, 0, 4));
 
             HarassMenu = Menu.AddSubMenu("Harass Settings", "HarassSettings");
             HarassMenu.AddLabel("Harass Settings");
@@ -145,12 +146,11 @@ namespace Blessed_Riven
             FarmingMenu.Add("Wlasthit", new CheckBox("Use W LastHit"));
             FarmingMenu.Add("Elasthit", new CheckBox("Use E LastHit"));
 
-
             SetSmiteSlot();
             if (SmiteSlot != SpellSlot.Unknown)
             {
                 SmiteMenu = Menu.AddSubMenu("Smite Usage", "SmiteUsage");
-                SmiteMenu.Add("SmiteEnemy", new CheckBox("Use Smite Combo for Enemy!"));               
+                SmiteMenu.Add("SmiteEnemy", new CheckBox("Use Smite Combo for Enemy!"));
                 SmiteMenu.AddLabel("Smite Usage");
                 SmiteMenu.Add("Use Smite?", new CheckBox("Use Smite"));
                 SmiteMenu.Add("Red?", new CheckBox("Red"));
@@ -159,30 +159,35 @@ namespace Blessed_Riven
                 SmiteMenu.Add("Baron?", new CheckBox("Baron"));
             }
 
-
             MiscMenu = Menu.AddSubMenu("More Settings", "Misc");
-            MiscMenu.AddSeparator();
             MiscMenu.AddLabel("Auto");
             MiscMenu.Add("AutoIgnite", new CheckBox("Auto Ignite"));
             MiscMenu.Add("AutoQSS", new CheckBox("Auto QSS"));
             MiscMenu.Add("AutoW", new CheckBox("Auto W"));
-            MiscMenu.AddSeparator();
             MiscMenu.AddLabel("Keep Alive Settings");
             MiscMenu.Add("Alive.Q", new CheckBox("Keep Q Alive"));
             MiscMenu.Add("Alive.R", new CheckBox("Use R2 Before Expire"));
-            MiscMenu.AddSeparator();
             MiscMenu.AddLabel("Extra");
             MiscMenu.Add("interrupter", new CheckBox("Use Interruptable Spells"));
             MiscMenu.Add("gapcloser", new CheckBox("Use Gapclose Spells"));
-            MiscMenu.AddSeparator();
             MiscMenu.AddLabel("Activator");
-            MiscMenu.Add("useHP", new CheckBox("Use Health Potion"));           
+            MiscMenu.Add("useHP", new CheckBox("Use Health Potion"));
             MiscMenu.Add("useHPV", new Slider("HP < %", 45, 0, 100));
             MiscMenu.Add("useElixir", new CheckBox("Use Elixir"));
             MiscMenu.Add("useElixirCount", new Slider("EnemyCount > ", 1, 0, 4));
             MiscMenu.Add("useCrystal", new CheckBox("Use Refillable Potions"));
             MiscMenu.Add("useCrystalHPV", new Slider("HP < %", 65, 0, 100));
             MiscMenu.Add("useCrystalManaV", new Slider("Mana < %", 65, 0, 100));
+
+            DelayMenu = Menu.AddSubMenu("Delay Settings(Humanizer)", "Delay");
+            DelayMenu.Add("spell1a1b", new Slider("Q1,Q2 Delay(ms)", 261, 100, 400));
+            DelayMenu.Add("spell1c", new Slider("Q3 Delay(ms)", 353, 100, 400));
+            DelayMenu.Add("spell2", new Slider("W Delay(ms)", 120, 100, 400));
+            DelayMenu.Add("spell4a", new Slider("R Delay(ms)", 0, 0, 400));
+            DelayMenu.Add("spell4b", new Slider("R2 Delay(ms)", 100, 50, 400));
+
+            ShieldMenu = Menu.AddSubMenu("Shield Settings", "ShieldSettings");
+            ShieldMenu.Add("UseShield", new CheckBox("Use Shield(E)"));
 
             Skin = Menu.AddSubMenu("Skin Changer", "SkinChanger");
             Skin.Add("checkSkin", new CheckBox("Use Skin Changer"));
@@ -192,18 +197,22 @@ namespace Blessed_Riven
             DrawMenu.Add("drawStatus", new CheckBox("Draw Status"));
             DrawMenu.Add("drawCombo", new CheckBox("Draw Combo Range"));
             DrawMenu.Add("drawFBurst", new CheckBox("Draw Flash Burst Range"));
+            DrawMenu.Add("DrawDamage", new CheckBox("Draw Damage Bar"));
 
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
+            Drawing.OnEndScene += Drawing_OnEndScene;
             Game.OnUpdate += OnGameUpdate;
             Obj_AI_Base.OnProcessSpellCast += Obj_AI_Base_OnProcessSpellCast;
             Obj_AI_Base.OnSpellCast += Obj_AI_Base_OnSpellCast;
             Obj_AI_Base.OnPlayAnimation += Obj_AI_Base_OnPlayAnimation;
             Gapcloser.OnGapcloser += Gapcloser_OnGapCloser;
             Interrupter.OnInterruptableSpell += Interrupter_OnInterruptableSpell;
-            
+            Obj_AI_Base.OnProcessSpellCast += OnProcessSpellCast;
+            getDB();
             Game.OnTick += IgniteEvent;
         }
+        private static HashSet<string> DB { get; set; }
         private static void SetSmiteSlot()
         {
             foreach (
@@ -213,6 +222,145 @@ namespace Blessed_Riven
             {
                 SmiteSlot = spell.Slot;
             }
+        }
+
+        private static void getDB()
+        {
+            if (!ShieldMenu["UseShield"].Cast<CheckBox>().CurrentValue) return;
+            DB = new HashSet<string>
+            {
+                "AhriSeduce"
+                ,
+                "InfernalGuardian"
+                ,
+                "EnchantedCrystalArrow"
+                ,
+                "InfernalGuardian"
+                ,
+                "EnchantedCrystalArrow"
+                ,
+                "RocketGrab"
+                ,
+                "BraumQ"
+                ,
+                "CassiopeiaPetrifyingGaze"
+                ,
+                "DariusAxeGrabCone"
+                ,
+                "DravenDoubleShot"
+                ,
+                "DravenRCast"
+                ,
+                "Dazzle"
+                ,
+                "EzrealTrueshotBarrage"
+                ,
+                "FizzMarinerDoom"
+                ,
+                "GnarBigW"
+                ,
+                "GnarR"
+                ,
+                "GragasR"
+                ,
+                "GravesChargeShot"
+                ,
+                "GravesClusterShot"
+                ,
+                "JarvanIVDemacianStandard"
+                ,
+                "JinxW"
+                ,
+                "JinxR"
+                ,
+                "KarmaQ"
+                ,
+                "KogMawLivingArtillery"
+                ,
+                "LeblancSlide"
+                ,
+                "LeblancSoulShackle"
+                ,
+                "LeonaSolarFlare"
+                ,
+                "LuxLightBinding"
+                ,
+                "LuxLightStrikeKugel"
+                ,
+                "LuxMaliceCannon"
+                ,
+                "UFSlash"
+                ,
+                "DarkBindingMissile"
+                ,
+                "NamiQ"
+                ,
+                "NamiR"
+                ,
+                "OrianaDetonateCommand"
+                ,
+                "RengarE"
+                ,
+                "rivenizunablade"
+                ,
+                "RumbleCarpetBombM"
+                ,
+                "SejuaniGlacialPrisonStart"
+                ,
+                "SionR"
+                ,
+                "ShenShadowDash"
+                ,
+                "SonaR"
+                ,
+                "StaticField"
+                ,
+                "ThreshQ"
+                ,
+                "JaxCounterStrike"
+                ,
+                "VarusQMissilee"
+                ,
+                "VarusR"
+                ,
+                "VeigarBalefulStrike"
+                ,
+                "VelkozQ"
+                ,
+                "Vi-q"
+                ,
+                "Laser"
+                ,
+                "xeratharcanopulse2"
+                ,
+                "XerathArcaneBarrage2"
+                ,
+                "XerathMageSpear"
+                ,
+                "xerathrmissilewrapper"
+                ,
+                "yasuoq3w"
+                ,
+                "ZacQ"
+                ,
+                "ZedShuriken"
+                ,
+                "ZiggsQ"
+                ,
+                "ZiggsW"
+                ,
+                "ZiggsE"
+                ,
+                "ZiggsR"
+                ,
+                "ZileanQ"
+                ,
+                "ZyraQFissure"
+                ,
+                "ZyraGraspingRoots"
+                ,
+                "goldcardlock"
+            };
         }
 
         private static void IgniteEvent(EventArgs args)
@@ -250,36 +398,55 @@ namespace Blessed_Riven
         private static void Interrupter_OnInterruptableSpell(Obj_AI_Base sender,
             Interrupter.InterruptableSpellEventArgs e)
         {
-            
-            if (MiscMenu["interrupter"].Cast<CheckBox>().CurrentValue && sender.IsEnemy &&
-                e.DangerLevel >= DangerLevel.Medium && sender.IsValidTarget(900))
+            try {
+                if (MiscMenu["interrupter"].Cast<CheckBox>().CurrentValue && sender.IsEnemy &&
+                    e.DangerLevel >= DangerLevel.Medium && sender.IsValidTarget(900))
+                {
+                    E.Cast(sender.ServerPosition);
+                }
+            }
+            catch (Exception ex)
             {
-                E.Cast(sender.ServerPosition);
+                Console.WriteLine(ex);
+            }
+            finally
+            {
+
             }
         }
 
         public static void Gapcloser_OnGapCloser(AIHeroClient sender, Gapcloser.GapcloserEventArgs e)
         {
-            if (MiscMenu["gapcloser"].Cast<CheckBox>().CurrentValue && sender.IsEnemy &&
-                sender.IsValidTarget(900))
+            try {
+                if (MiscMenu["gapcloser"].Cast<CheckBox>().CurrentValue && sender.IsEnemy &&
+                    sender.IsValidTarget(900))
+                {
+                    E.Cast(sender.ServerPosition);
+                }
+            }
+            catch (Exception ex)
             {
-                E.Cast(sender.ServerPosition);
+                Console.WriteLine(ex);
+            }
+            finally
+            {
+
             }
         }
 
         private static void Game_OnTick(EventArgs args)
         {
-            var HPpot = MiscMenu["useHP"].Cast<CheckBox>().CurrentValue;       
+            var HPpot = MiscMenu["useHP"].Cast<CheckBox>().CurrentValue;
             var HPv = MiscMenu["useHPv"].Cast<Slider>().CurrentValue;
             var t = TargetSelector.GetTarget(Q.Range, DamageType.Magical);
             var w = TargetSelector.GetTarget(W.Range, DamageType.Physical);
 
-            if(w.IsValidTarget(W.Range) && MiscMenu["AutoW"].Cast<CheckBox>().CurrentValue)
+            if (w.IsValidTarget(W.Range) && MiscMenu["AutoW"].Cast<CheckBox>().CurrentValue)
             {
                 W.Cast();
             }
 
-            if(_Player.HasBuffOfType(BuffType.Stun) || _Player.HasBuffOfType(BuffType.Taunt) || _Player.HasBuffOfType(BuffType.Polymorph) || _Player.HasBuffOfType(BuffType.Frenzy) || _Player.HasBuffOfType(BuffType.Fear) || _Player.HasBuffOfType(BuffType.Snare) || _Player.HasBuffOfType(BuffType.Suppression))
+            if (_Player.HasBuffOfType(BuffType.Stun) || _Player.HasBuffOfType(BuffType.Taunt) || _Player.HasBuffOfType(BuffType.Polymorph) || _Player.HasBuffOfType(BuffType.Frenzy) || _Player.HasBuffOfType(BuffType.Fear) || _Player.HasBuffOfType(BuffType.Snare) || _Player.HasBuffOfType(BuffType.Suppression))
             {
                 DoQSS();
             }
@@ -308,7 +475,7 @@ namespace Blessed_Riven
             {
                 QCount = 0;
             }
-            if (MiscMenu["Alive.Q"].Cast<CheckBox>().CurrentValue && !Player.Instance.IsRecalling() && QCount < 3 && QCount > 0 && LastCastQ + 3480 < Environment.TickCount && Player.Instance.HasBuff("RivenTriCleaveBuff"))
+            if (MiscMenu["Alive.Q"].Cast<CheckBox>().CurrentValue && !Player.Instance.IsRecalling() && QCount < 3 && QCount > 0 && LastCastQ + 3480 < Environment.TickCount && Player.Instance.HasBuff("RivenTriCleaveBuff") && !Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
             {
                 Player.CastSpell(SpellSlot.Q,
                     Orbwalker.LastTarget != null && Orbwalker.LastAutoAttack - Environment.TickCount < 3000
@@ -351,10 +518,10 @@ namespace Blessed_Riven
             {
                 Flee();
             }
-            if(ComboMenu["FlashBurst"].Cast<KeyBind>().CurrentValue)
+            if (ComboMenu["FlashBurst"].Cast<KeyBind>().CurrentValue)
             {
                 Burst();
-                if(TargetSelector.SelectedTarget == null)
+                if (TargetSelector.SelectedTarget == null)
                 {
                     Orbwalker.OrbwalkTo(Game.CursorPos);
                 }
@@ -369,8 +536,10 @@ namespace Blessed_Riven
             }
         }
 
+
         private static void Burst()
         {
+
             if (Orbwalker.IsAutoAttacking) return;
             var target = TargetSelector.SelectedTarget;
             if (target == null || !target.IsValidTarget()) return;
@@ -379,7 +548,7 @@ namespace Blessed_Riven
             if (target.IsValidTarget() && !target.IsZombie)
             {
                 if (R.IsReady() && R.Name == "RivenFengShuiEngine" && W.IsReady() && E.IsReady() && Q.IsReady() &&
-                    _Player.Distance(target.Position) <= 250 + 70 + _Player.AttackRange && QCount == 3)
+                    _Player.Distance(target.Position) <= 250 + 70 + _Player.AttackRange && QCount == 2)
                 {
                     Player.CastSpell(SpellSlot.E, target.Position);
                     Player.CastSpell(SpellSlot.R);
@@ -406,7 +575,7 @@ namespace Blessed_Riven
                 }
                 else if (Flash.IsReady && Q.IsReady() && W.IsReady() && E.IsReady()
                          && R.IsReady() && R.Name == "RivenFengShuiEngine" && (_Player.Distance(target.Position) <= 800) &&
-                         ( (Item.HasItem(3074) && Item.CanUseItem(3074))))
+                         ((Item.HasItem(3074) && Item.CanUseItem(3074))))
 
                 {
                     Player.CastSpell(SpellSlot.E, target.Position);
@@ -455,10 +624,10 @@ namespace Blessed_Riven
             Orbwalker.OrbwalkTo(target.ServerPosition);
             if (target != null && target.Distance(_Player) < 425 + E.Range)
             {
-                if(W.IsReady() && E.IsReady() && Flash.IsReady)
+                if (W.IsReady() && E.IsReady() && Flash.IsReady)
                 {
                     Player.CastSpell(SpellSlot.E, target.Position);
-                    Core.DelayAction(() => _Player.Spellbook.CastSpell(Flash.Slot, target.Position), 1);
+                    _Player.Spellbook.CastSpell(Flash.Slot, target.Position);
                     Player.CastSpell(SpellSlot.W);
                 }
                 else
@@ -539,7 +708,7 @@ namespace Blessed_Riven
             return;
         }
 
-        
+
 
         private static void ForceItem()
         {
@@ -560,27 +729,27 @@ namespace Blessed_Riven
             switch (args.Animation)
             {
                 case "Spell1a":
-                    t = 261;
+                    t = DelayMenu["spell1a1b"].Cast<Slider>().CurrentValue;
                     QCount = 1;
                     break;
                 case "Spell1b":
-                    t = 261;
+                    t = DelayMenu["spell1a1b"].Cast<Slider>().CurrentValue;
                     QCount = 2;
                     break;
                 case "Spell1c":
-                    t = 353;
+                    t = DelayMenu["spell1c"].Cast<Slider>().CurrentValue;
                     QCount = 0;
                     break;
                 case "Spell2":
-                    t = 120;
+                    t = DelayMenu["spell2"].Cast<Slider>().CurrentValue;
                     break;
                 case "Spell3":
                     break;
                 case "Spell4a":
-                    t = 0;
+                    t = DelayMenu["spell4a"].Cast<Slider>().CurrentValue;
                     break;
                 case "Spell4b":
-                    t = 100;
+                    t = DelayMenu["spell4b"].Cast<Slider>().CurrentValue;
                     break;
             }
             if (t != 0 && ((Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None) || ComboMenu["FlashBurst"].Cast<KeyBind>().CurrentValue))
@@ -707,198 +876,327 @@ namespace Blessed_Riven
             }
 
             if (args.SData.IsAutoAttack() && target != null)
-            {                               
-                        if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
-                        {
-                            ComboAfterAa(target);
-                        }
+            {
+                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
+                {
+                    ComboAfterAa(target);
+                }
 
-                        if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass))
-                        {
-                            HarassAfterAa(target);
-                        }
+                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass))
+                {
+                    HarassAfterAa(target);
+                }
 
-                        if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.JungleClear) &&
-                            target.IsMinion())
-                        {
-                            JungleAfterAa(target);
-                        }
+                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.JungleClear))
+                {
+                    JungleAfterAa(target);
+                }
 
-                        if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LastHit) && target.IsMinion())
-                        {
-                            LastHitAfterAa(target);
-                        }
+                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LastHit) && target.IsMinion())
+                {
+                    LastHitAfterAa(target);
+                }
 
-                        if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LaneClear) && target.IsMinion())
-                        {
-                            LaneClearAfterAa(target);
-                        }      
+                if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.LaneClear) && target.IsMinion())
+                {
+                    LaneClearAfterAa(target);
+                }
             }
+        }
+
+        private static readonly float _barLength = 104;
+        private static readonly float _xOffset = 2;
+        private static readonly float _yOffset = 9;
+        private static void Drawing_OnEndScene(EventArgs args)
+        {
+            if (_Player.IsDead)
+                return;
+            if (!DrawMenu["DrawDamage"].Cast<CheckBox>().CurrentValue) return;
+            foreach (var aiHeroClient in EntityManager.Heroes.Enemies)
+            {
+                if (!aiHeroClient.IsHPBarRendered || !aiHeroClient.VisibleOnScreen) continue;
+                var pos = new Vector2(aiHeroClient.HPBarPosition.X + _xOffset, aiHeroClient.HPBarPosition.Y + _yOffset);
+                var fullbar = (_barLength) * (aiHeroClient.HealthPercent / 100);
+                var damage = (_barLength) *
+                                 ((getComboDamage(aiHeroClient) / aiHeroClient.MaxHealth) > 1
+                                     ? 1
+                                     : (getComboDamage(aiHeroClient) / aiHeroClient.MaxHealth));
+                Line.DrawLine(System.Drawing.Color.Gray, 9f, new Vector2(pos.X, pos.Y),
+                    new Vector2(pos.X + (damage > fullbar ? fullbar : damage), pos.Y));
+                Line.DrawLine(System.Drawing.Color.Black, 9, new Vector2(pos.X + (damage > fullbar ? fullbar : damage) - 2, pos.Y), new Vector2(pos.X + (damage > fullbar ? fullbar : damage) + 2, pos.Y));
+            }
+        }
+
+        private static float getComboDamage(Obj_AI_Base enemy)
+        {
+            if (enemy != null)
+            {
+                float damage = 0;
+                float passivenhan;
+                if (_Player.Level >= 18)
+                {
+                    passivenhan = 0.5f;
+                }
+                else if (_Player.Level >= 15)
+                {
+                    passivenhan = 0.45f;
+                }
+                else if (_Player.Level >= 12)
+                {
+                    passivenhan = 0.4f;
+                }
+                else if (_Player.Level >= 9)
+                {
+                    passivenhan = 0.35f;
+                }
+                else if (_Player.Level >= 6)
+                {
+                    passivenhan = 0.3f;
+                }
+                else if (_Player.Level >= 3)
+                {
+                    passivenhan = 0.25f;
+                }
+                else
+                {
+                    passivenhan = 0.2f;
+                }
+                if (Item.HasItem(3074)) damage = damage + _Player.GetAutoAttackDamage(enemy) * 0.7f;
+                if (W.IsReady()) damage = damage + ObjectManager.Player.GetSpellDamage(enemy, SpellSlot.W);
+                if (Q.IsReady())
+                {
+                    var qnhan = 4 - QCount;
+                    damage = damage + ObjectManager.Player.GetSpellDamage(enemy, SpellSlot.Q) * qnhan +
+                             _Player.GetAutoAttackDamage(enemy) * qnhan * (1 + passivenhan);
+                }
+                damage = damage + _Player.GetAutoAttackDamage(enemy) * (1 + passivenhan);
+                if (R.IsReady())
+                {
+                    return damage * 1.2f + ObjectManager.Player.GetSpellDamage(enemy, SpellSlot.R);
+                }
+
+                return damage;
+            }
+            return 0;
         }
 
         public static void ComboAfterAa(Obj_AI_Base target)
         {
-            if (Player.Instance.HasBuff("RivenFengShuiEngine") && R.IsReady() &&
-                ComboMenu["R2Combo"].Cast<CheckBox>().CurrentValue)
+            try
             {
-                if (Player.Instance.CalculateDamageOnUnit(target, DamageType.Physical, Damage.RDamage(target)) + Player.Instance.GetAutoAttackDamage(target, true) > target.Health)
+                if (Player.Instance.HasBuff("RivenFengShuiEngine") && R.IsReady() &&
+                    ComboMenu["R2Combo"].Cast<CheckBox>().CurrentValue)
                 {
-                    R.Cast(target);
+                    if (Player.Instance.CalculateDamageOnUnit(target, DamageType.Physical, Damage.RDamage(target)) + Player.Instance.GetAutoAttackDamage(target, true) > target.Health)
+                    {
+                        R.Cast(target);
+                        return;
+                    }
+                }
+                if (ComboMenu["WCombo"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                    W.IsInRange(target))
+                {
+                    if (Item.HasItem(3074) && Item.CanUseItem(3074))
+                    {
+                        Item.UseItem(3074);
+                        return;
+                    }
+                    else if (Item.HasItem(3077) && Item.CanUseItem(3077))
+                    {
+                        Item.UseItem(3077);
+                        return;
+                    }
+                    Player.CastSpell(SpellSlot.W);
                     return;
                 }
-            }
-            if (ComboMenu["WCombo"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
-                W.IsInRange(target))
-            {
+                if (ComboMenu["QCombo"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+                {
+                    Player.CastSpell(SpellSlot.Q, target.Position);
+                    return;
+                }
                 if (Item.HasItem(3074) && Item.CanUseItem(3074))
                 {
                     Item.UseItem(3074);
-                    return;
                 }
                 else if (Item.HasItem(3077) && Item.CanUseItem(3077))
                 {
                     Item.UseItem(3077);
-                    return;
                 }
-                Player.CastSpell(SpellSlot.W);
-                return;
             }
-            if (ComboMenu["QCombo"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+            catch (Exception ex)
             {
-                Player.CastSpell(SpellSlot.Q, target.Position);
-                return;
+                Console.WriteLine(ex);
             }
-            if (Item.HasItem(3074) && Item.CanUseItem(3074))
+            finally
             {
-                Item.UseItem(3074);
-            }
-            else if (Item.HasItem(3077) && Item.CanUseItem(3077))
-            {
-                Item.UseItem(3077);
-            }
+
+            }         
         }
 
         public static void HarassAfterAa(Obj_AI_Base target)
         {
-            if (HarassMenu["WHarass"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
-                W.IsInRange(target))
+            try
             {
+                if (HarassMenu["WHarass"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                    W.IsInRange(target))
+                {
+                    if (Item.HasItem(3074) && Item.CanUseItem(3074))
+                    {
+                        Item.UseItem(3074);
+                        return;
+                    }
+                    else if (Item.HasItem(3077) && Item.CanUseItem(3077))
+                    {
+                        Item.UseItem(3077);
+                        return;
+                    }
+                    Player.CastSpell(SpellSlot.W);
+                    return;
+                }
+                if (HarassMenu["QHarass"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+                {
+                    Player.CastSpell(SpellSlot.Q, target.Position);
+                    return;
+                }
                 if (Item.HasItem(3074) && Item.CanUseItem(3074))
                 {
                     Item.UseItem(3074);
-                    return;
                 }
                 else if (Item.HasItem(3077) && Item.CanUseItem(3077))
                 {
                     Item.UseItem(3077);
-                    return;
                 }
-                Player.CastSpell(SpellSlot.W);
-                return;
             }
-            if (HarassMenu["QHarass"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+            catch (Exception ex)
             {
-                Player.CastSpell(SpellSlot.Q, target.Position);
-                return;
+                Console.WriteLine(ex);
             }
-            if (Item.HasItem(3074) && Item.CanUseItem(3074))
+            finally
             {
-                Item.UseItem(3074);
-            }
-            else if (Item.HasItem(3077) && Item.CanUseItem(3077))
-            {
-                Item.UseItem(3077);
+
             }
         }
 
         public static void LastHitAfterAa(Obj_AI_Base target)
         {
-            var unitHp = target.Health - Player.Instance.GetAutoAttackDamage(target, true);
-            if (unitHp > 0)
+            try
             {
-                if (FarmingMenu["QLastHit"].Cast<CheckBox>().CurrentValue && Q.IsReady() &&
-                    Player.Instance.CalculateDamageOnUnit(target, DamageType.Physical, Damage.QDamage()) >
-                    unitHp)
+                var unitHp = target.Health - Player.Instance.GetAutoAttackDamage(target, true);
+                if (unitHp > 0)
                 {
-                    Player.CastSpell(SpellSlot.Q, target.Position);
-                    return;
+                    if (FarmingMenu["QLastHit"].Cast<CheckBox>().CurrentValue && Q.IsReady() &&
+                        Player.Instance.CalculateDamageOnUnit(target, DamageType.Physical, Damage.QDamage()) >
+                        unitHp)
+                    {
+                        Player.CastSpell(SpellSlot.Q, target.Position);
+                        return;
+                    }
+                    if (FarmingMenu["WLastHit"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                        W.IsInRange(target) &&
+                        Player.Instance.CalculateDamageOnUnit(target, DamageType.Physical, Damage.WDamage()) >
+                        unitHp)
+                    {
+                        Player.CastSpell(SpellSlot.W);
+                    }
                 }
-                if (FarmingMenu["WLastHit"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
-                    W.IsInRange(target) &&
-                    Player.Instance.CalculateDamageOnUnit(target, DamageType.Physical, Damage.WDamage()) >
-                    unitHp)
-                {
-                    Player.CastSpell(SpellSlot.W);
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            finally
+            {
+
             }
         }
 
         public static void LaneClearAfterAa(Obj_AI_Base target)
         {
-            var unitHp = target.Health - Player.Instance.GetAutoAttackDamage(target, true);
-            if (unitHp > 0)
-            {
-                if (FarmingMenu["QLaneClear"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+            try {
+                var unitHp = target.Health - Player.Instance.GetAutoAttackDamage(target, true);
+                if (unitHp > 0)
                 {
-                    Player.CastSpell(SpellSlot.Q, target.Position);
-                    return;
+                    if (FarmingMenu["QLaneClear"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+                    {
+                        Player.CastSpell(SpellSlot.Q, target.Position);
+                        return;
+                    }
+                    if (FarmingMenu["WLaneClear"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                        W.IsInRange(target))
+                    {
+                        Player.CastSpell(SpellSlot.W);
+                        return;
+                    }
                 }
-                if (FarmingMenu["WLaneClear"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
-                    W.IsInRange(target))
+                else
                 {
-                    Player.CastSpell(SpellSlot.W);
-                    return;
+                    List<Obj_AI_Minion> minions = EntityManager.MinionsAndMonsters.GetLaneMinions(EntityManager.UnitTeam.Enemy,
+                        Player.Instance.Position, Q.Range).Where(a => a.NetworkId != target.NetworkId).ToList();
+                    if (FarmingMenu["QLaneClear"].Cast<CheckBox>().CurrentValue && Q.IsReady() && minions.Any())
+                    {
+                        Player.CastSpell(SpellSlot.Q, minions[0].Position);
+                        return;
+                    }
+                    minions = minions.Where(a => a.Distance(Player.Instance) < W.Range).ToList();
+                    if (FarmingMenu["WLaneClear"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                        W.IsInRange(target) && minions.Any())
+                    {
+                        Player.CastSpell(SpellSlot.W);
+                        return;
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                List<Obj_AI_Minion> minions = EntityManager.MinionsAndMonsters.GetLaneMinions(EntityManager.UnitTeam.Enemy,
-                    Player.Instance.Position, Q.Range).Where(a => a.NetworkId != target.NetworkId).ToList();
-                if (FarmingMenu["QLaneClear"].Cast<CheckBox>().CurrentValue && Q.IsReady() && minions.Any())
-                {
-                    Player.CastSpell(SpellSlot.Q, minions[0].Position);
-                    return;
-                }
-                minions = minions.Where(a => a.Distance(Player.Instance) < W.Range).ToList();
-                if (FarmingMenu["WLaneClear"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
-                    W.IsInRange(target) && minions.Any())
-                {
-                    Player.CastSpell(SpellSlot.W);
-                    return;
-                }
+                Console.WriteLine(ex);
+            }
+            finally
+            {
+
             }
         }
 
         public static void JungleAfterAa(Obj_AI_Base target)
         {
-            if (FarmingMenu["WJungleClear"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
-                W.IsInRange(target))
+            try
             {
+                if (FarmingMenu["WJungleClear"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                    W.IsInRange(target))
+                {
+                    if (Item.HasItem(3074) && Item.CanUseItem(3074))
+                    {
+                        Item.UseItem(3074);
+                        return;
+                    }
+                    else if (Item.HasItem(3077) && Item.CanUseItem(3077))
+                    {
+                        Item.UseItem(3077);
+                        return;
+                    }
+                    Player.CastSpell(SpellSlot.W);
+                    return;
+                }
+                if (FarmingMenu["QJungleClear"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+                {
+                    Player.CastSpell(SpellSlot.Q, target.Position);
+                    return;
+                }
                 if (Item.HasItem(3074) && Item.CanUseItem(3074))
                 {
                     Item.UseItem(3074);
-                    return;
                 }
                 else if (Item.HasItem(3077) && Item.CanUseItem(3077))
                 {
                     Item.UseItem(3077);
-                    return;
                 }
-                Player.CastSpell(SpellSlot.W);
-                return;
             }
-            if (FarmingMenu["QJungleClear"].Cast<CheckBox>().CurrentValue && Q.IsReady())
+            catch (Exception ex)
             {
-                Player.CastSpell(SpellSlot.Q, target.Position);
-                return;
+                Console.WriteLine(ex);
             }
-            if (Item.HasItem(3074) && Item.CanUseItem(3074))
+            finally
             {
-                Item.UseItem(3074);
-            }
-            else if (Item.HasItem(3077) && Item.CanUseItem(3077))
-            {
-                Item.UseItem(3077);
+
             }
         }
 
@@ -941,63 +1239,74 @@ namespace Blessed_Riven
             var useR = ComboMenu["RCombo"].Cast<CheckBox>().CurrentValue;
             var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
             EnableR = false;
-
-            if (R.IsReady() && Player.Instance.HasBuff("RivenFengShuiEngine") &&
-                 ComboMenu["R2Combo"].Cast<CheckBox>().CurrentValue)
-            {
-                if (
-                    EntityManager.Heroes.Enemies.Where(
-                        enemy =>
-                            enemy.IsValidTarget(R.Range) &&
-                            enemy.Health <
-                            Player.Instance.CalculateDamageOnUnit(enemy, DamageType.Physical,
-                                Damage.RDamage(enemy))).Any(enemy => R.Cast(enemy)))
+            try {
+                if (R.IsReady() && Player.Instance.HasBuff("RivenFengShuiEngine") &&
+                     ComboMenu["R2Combo"].Cast<CheckBox>().CurrentValue)
                 {
-                    return;
+                    if (
+                        EntityManager.Heroes.Enemies.Where(
+                            enemy =>
+                                enemy.IsValidTarget(R.Range) &&
+                                enemy.Health <
+                                Player.Instance.CalculateDamageOnUnit(enemy, DamageType.Physical,
+                                    Damage.RDamage(enemy))).Any(enemy => R.Cast(enemy)))
+                    {
+                        return;
+                    }
                 }
-            }
 
-            if (target == null) return;
+                if (target == null) return;
 
-            if (ComboMenu["RCombo"].Cast<CheckBox>().CurrentValue && R.IsReady() && !Player.Instance.HasBuff("RivenFengShuiEngine"))
-            {
-                if (ComboMenu["RCantKill"].Cast<CheckBox>().CurrentValue &&
-                    target.Health > Damage.ComboDamage(target, true)
-                    && target.Health < Damage.ComboDamage(target)
-                    && target.Health > Player.Instance.GetAutoAttackDamage(target, true) * 2 ||
-                    ComboMenu["REnemyCount"].Cast<Slider>().CurrentValue > 0 &&
-                    Player.Instance.CountEnemiesInRange(600) >= ComboMenu["REnemyCount"].Cast<Slider>().CurrentValue || IsRActive)
+                if (ComboMenu["RCombo"].Cast<CheckBox>().CurrentValue && R.IsReady() && !Player.Instance.HasBuff("RivenFengShuiEngine"))
                 {
-                    
+                    if ((ComboMenu["RCantKill"].Cast<CheckBox>().CurrentValue &&
+                        target.Health > Damage.ComboDamage(target, true)
+                        && target.Health < Damage.ComboDamage(target)
+                        && target.Health > Player.Instance.GetAutoAttackDamage(target, true) * 2) ||
+                        (ComboMenu["REnemyCount"].Cast<Slider>().CurrentValue > 0 &&
+                        Player.Instance.CountEnemiesInRange(600) >= ComboMenu["REnemyCount"].Cast<Slider>().CurrentValue) || IsRActive)
+                    {
                         EnableR = true;
-                    
+                    }
+                    else if((!ComboMenu["RCantKill"].Cast<CheckBox>().CurrentValue && ComboMenu["REnemyCount"].Cast<Slider>().CurrentValue == 0) || ComboMenu["ForcedR"].Cast<KeyBind>().CurrentValue)
+                    {
+                        EnableR = true;
+                    }
                 }
-            }
 
-            if (ComboMenu["ECombo"].Cast<CheckBox>().CurrentValue && target.Distance(Player.Instance) > W.Range && E.IsReady())
-            {
-                if (Item.HasItem(3142) && Item.CanUseItem(3142))
+                if (ComboMenu["ECombo"].Cast<CheckBox>().CurrentValue && target.Distance(Player.Instance) > W.Range && E.IsReady())
                 {
-                    Item.UseItem(3142);
-                }
-                Player.CastSpell(SpellSlot.E, target.Position);
-                return;
-            }
-
-            if (ComboMenu["WCombo"].Cast<CheckBox>().CurrentValue &&
-                target.Distance(Player.Instance) <= W.Range && W.IsReady())
-            {
-                if (Item.HasItem(3074) && Item.CanUseItem(3074))
-                {
-                    Item.UseItem(3074);
+                    if (Item.HasItem(3142) && Item.CanUseItem(3142))
+                    {
+                        Item.UseItem(3142);
+                    }
+                    Player.CastSpell(SpellSlot.E, target.Position);
                     return;
                 }
-                else if (Item.HasItem(3077) && Item.CanUseItem(3077))
+
+                if (ComboMenu["WCombo"].Cast<CheckBox>().CurrentValue &&
+                    target.Distance(Player.Instance) <= W.Range && W.IsReady())
                 {
-                    Item.UseItem(3077);
-                    return;
+                    if (Item.HasItem(3074) && Item.CanUseItem(3074))
+                    {
+                        Item.UseItem(3074);
+                        return;
+                    }
+                    else if (Item.HasItem(3077) && Item.CanUseItem(3077))
+                    {
+                        Item.UseItem(3077);
+                        return;
+                    }
+                    Player.CastSpell(SpellSlot.W);
                 }
-                Player.CastSpell(SpellSlot.W);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            finally
+            {
+
             }
         }
         private static void Flee()
@@ -1013,33 +1322,43 @@ namespace Blessed_Riven
 
             var target = TargetSelector.GetTarget(E.Range + W.Range, DamageType.Physical);
 
-            if (target == null) return;
+            try {
+                if (target == null) return;
 
-            if (HarassMenu["EHarass"].Cast<CheckBox>().CurrentValue &&
-                (target.Distance(Player.Instance) > W.Range &&
-                 target.Distance(Player.Instance) < E.Range + W.Range ||
-                 IsRActive && R.IsReady() &&
-                 target.Distance(Player.Instance) < E.Range + 265 + Player.Instance.BoundingRadius) &&
-                E.IsReady())
-            {
-                Player.CastSpell(SpellSlot.E, target.Position);
-                return;
+                if (HarassMenu["EHarass"].Cast<CheckBox>().CurrentValue &&
+                    (target.Distance(Player.Instance) > W.Range &&
+                     target.Distance(Player.Instance) < E.Range + W.Range ||
+                     IsRActive && R.IsReady() &&
+                     target.Distance(Player.Instance) < E.Range + 265 + Player.Instance.BoundingRadius) &&
+                    E.IsReady())
+                {
+                    Player.CastSpell(SpellSlot.E, target.Position);
+                    return;
+                }
+
+                if (HarassMenu["WHarass"].Cast<CheckBox>().CurrentValue &&
+                    target.Distance(Player.Instance) <= W.Range && W.IsReady())
+                {
+                    if (Item.HasItem(3074) && Item.CanUseItem(3074))
+                    {
+                        Item.UseItem(3074);
+                        return;
+                    }
+                    else if (Item.HasItem(3077) && Item.CanUseItem(3077))
+                    {
+                        Item.UseItem(3077);
+                        return;
+                    }
+                    Player.CastSpell(SpellSlot.W);
+                }
             }
-
-            if (HarassMenu["WHarass"].Cast<CheckBox>().CurrentValue &&
-                target.Distance(Player.Instance) <= W.Range && W.IsReady())
+            catch (Exception ex)
             {
-                if (Item.HasItem(3074) && Item.CanUseItem(3074))
-                {
-                    Item.UseItem(3074);
-                    return;
-                }
-                else if (Item.HasItem(3077) && Item.CanUseItem(3077))
-                {
-                    Item.UseItem(3077);
-                    return;
-                }
-                Player.CastSpell(SpellSlot.W);
+                Console.WriteLine(ex);
+            }
+            finally
+            {
+
             }
         }
 
@@ -1049,43 +1368,63 @@ namespace Blessed_Riven
                  EntityManager.MinionsAndMonsters.Monsters.OrderByDescending(a => a.MaxHealth)
                      .FirstOrDefault(a => a.Distance(Player.Instance) < Player.Instance.GetAutoAttackRange(a));
 
-            if (minion == null) return;
+            try {
+                if (minion == null) return;
 
-            if (FarmingMenu["QJungleClear"].Cast<CheckBox>().CurrentValue && Q.IsReady() &&
-                   minion.Health <=
-                   Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.QDamage()))
-            {
-                Player.CastSpell(SpellSlot.Q, minion.Position);
-                return;
-            }
-
-            if (FarmingMenu["EJungleClear"].Cast<CheckBox>().CurrentValue && (!W.IsReady() && !Q.IsReady() || Player.Instance.HealthPercent < 20) && E.IsReady() &&
-                LastCastW + 750 < Environment.TickCount)
-            {
-                Player.CastSpell(SpellSlot.E, minion.Position);
-            }
-        }
-        public static void LaneClear()
-        {
-            Orbwalker.ForcedTarget = null;
-            if (Orbwalker.IsAutoAttacking || LastCastQ + 260 > Environment.TickCount) return;
-            foreach (
-                var minion in EntityManager.MinionsAndMonsters.EnemyMinions.Where(a => a.IsValidTarget(W.Range)))
-            {
-                if (FarmingMenu["QLaneClear"].Cast<CheckBox>().CurrentValue && Q.IsReady() &&
-                    minion.Health <=
-                    Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.QDamage()))
+                if (FarmingMenu["QJungleClear"].Cast<CheckBox>().CurrentValue && Q.IsReady() &&
+                       minion.Health <=
+                       Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.QDamage()))
                 {
                     Player.CastSpell(SpellSlot.Q, minion.Position);
                     return;
                 }
-                if (FarmingMenu["WLaneClear"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
-                    minion.Health <=
-                    Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.WDamage()))
+
+                if (FarmingMenu["EJungleClear"].Cast<CheckBox>().CurrentValue && (!W.IsReady() && !Q.IsReady() || Player.Instance.HealthPercent < 20) && E.IsReady() &&
+                    LastCastW + 750 < Environment.TickCount)
                 {
-                    Player.CastSpell(SpellSlot.W);
-                    return;
+                    Player.CastSpell(SpellSlot.E, minion.Position);
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            finally
+            {
+
+            }
+        }
+        public static void LaneClear()
+        {          
+            Orbwalker.ForcedTarget = null;
+            try {
+                if (Orbwalker.IsAutoAttacking || LastCastQ + 260 > Environment.TickCount) return;
+                foreach (
+                    var minion in EntityManager.MinionsAndMonsters.EnemyMinions.Where(a => a.IsValidTarget(W.Range)))
+                {
+                    if (FarmingMenu["QLaneClear"].Cast<CheckBox>().CurrentValue && Q.IsReady() &&
+                        minion.Health <=
+                        Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.QDamage()))
+                    {
+                        Player.CastSpell(SpellSlot.Q, minion.Position);
+                        return;
+                    }
+                    if (FarmingMenu["WLaneClear"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                        minion.Health <=
+                        Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.WDamage()))
+                    {
+                        Player.CastSpell(SpellSlot.W);
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            finally
+            {
+
             }
 
         }
@@ -1106,25 +1445,35 @@ namespace Blessed_Riven
         public static void LastHit()
         {
             Orbwalker.ForcedTarget = null;
-            if (Orbwalker.IsAutoAttacking) return;
+            try {
+                if (Orbwalker.IsAutoAttacking) return;
 
-            foreach (
-                var minion in EntityManager.MinionsAndMonsters.EnemyMinions.Where(a => a.IsValidTarget(W.Range)))
+                foreach (
+                    var minion in EntityManager.MinionsAndMonsters.EnemyMinions.Where(a => a.IsValidTarget(W.Range)))
+                {
+                    if (FarmingMenu["QLastHit"].Cast<CheckBox>().CurrentValue && Q.IsReady() &&
+                        minion.Health <=
+                        Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.QDamage()))
+                    {
+                        Player.CastSpell(SpellSlot.Q, minion.Position);
+                        return;
+                    }
+                    if (FarmingMenu["WLastHit"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
+                        minion.Health <=
+                        Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.WDamage()))
+                    {
+                        Player.CastSpell(SpellSlot.W);
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
             {
-                if (FarmingMenu["QLastHit"].Cast<CheckBox>().CurrentValue && Q.IsReady() &&
-                    minion.Health <=
-                    Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.QDamage()))
-                {
-                    Player.CastSpell(SpellSlot.Q, minion.Position);
-                    return;
-                }
-                if (FarmingMenu["WLastHit"].Cast<CheckBox>().CurrentValue && W.IsReady() &&
-                    minion.Health <=
-                    Player.Instance.CalculateDamageOnUnit(minion, DamageType.Physical, Damage.WDamage()))
-                {
-                    Player.CastSpell(SpellSlot.W);
-                    return;
-                }
+                Console.WriteLine(ex);
+            }
+            finally
+            {
+
             }
         }
         public static bool IsRActive
@@ -1150,6 +1499,27 @@ namespace Blessed_Riven
             {                
                 var pos = Drawing.WorldToScreen(Player.Instance.Position);
                 EloBuddy.Drawing.DrawText((int)pos.X - 45, (int)pos.Y + 40, Color.DarkGray, "Forced R: " + IsRActive);
+            }
+        }
+
+        //
+        private static void OnProcessSpellCast(Obj_AI_Base sender, GameObjectProcessSpellCastEventArgs args)
+        {
+            try
+            {
+                if (sender.IsMe || sender.IsAlly || args.SData.IsAutoAttack()) return;
+                var articunoPerfectCheck = _Player.Position.PointOnLineSegment(args.Start,
+                    args.Start.Extend(args.End, args.SData.CastRangeDisplayOverride).To3D());
+                if (DB.Contains(args.SData.Name) &&
+                    E.IsReady() &&
+                    (articunoPerfectCheck || (args.Target != null && args.Target.IsMe)))
+                {
+                    E.Cast(Game.CursorPos);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Got Milk: " + ex);
             }
         }
     }

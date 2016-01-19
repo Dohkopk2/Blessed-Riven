@@ -4,3 +4,6 @@ C:\Users\Mertss\Desktop\buddy\Blessed Riven\obj\Debug\Perfect_Jax.pdb
 C:\Users\Mertss\Desktop\Blessed Riven\bin\Debug\Perfect_Jax.exe.config
 C:\Users\Mertss\Desktop\Blessed Riven\obj\Debug\Perfect_Jax.exe
 C:\Users\Mertss\Desktop\Blessed Riven\obj\Debug\Perfect_Jax.pdb
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\Perfect_Jax.exe.config
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\obj\Debug\Perfect_Jax.exe
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\obj\Debug\Perfect_Jax.pdb
