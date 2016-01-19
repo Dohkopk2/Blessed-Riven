@@ -15,3 +15,6 @@ C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\BlessedRiven.exe
 C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\BlessedRiven.pdb
 C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\obj\Debug\BlessedRiven.exe
 C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\obj\Debug\BlessedRiven.pdb
+C:\Users\Mertss\Desktop\Blessed Riven\bin\Debug\BlessedRiven.exe.config
+C:\Users\Mertss\Desktop\Blessed Riven\obj\Debug\BlessedRiven.exe
+C:\Users\Mertss\Desktop\Blessed Riven\obj\Debug\BlessedRiven.pdb
