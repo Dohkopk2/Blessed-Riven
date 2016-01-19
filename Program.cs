@@ -45,7 +45,7 @@ namespace Blessed_Riven
         private static readonly int[] SmiteGrey = { 3711, 3722, 3721, 3720, 3719 };
         private static readonly int[] SmiteRed = { 3715, 3718, 3717, 3716, 3714 };
         private static readonly int[] SmiteBlue = { 3706, 3710, 3709, 3708, 3707 };
-        private static SpellDataInst Flash;
+        private static Spell.Skillshot Flash;
         private static Spell.Targeted _ignite;
 
         static void Main(string[] args)
@@ -91,8 +91,12 @@ namespace Blessed_Riven
                 Smite = new Spell.Targeted(smite.Slot, 500);
             }
             Healthpot = new Item(2003, 0);
-            _ignite = new Spell.Targeted(ObjectManager.Player.GetSpellSlotFromName("summonerdot"), 600);           
-            Flash = ObjectManager.Player.Spellbook.Spells.FirstOrDefault(a => a.Name.ToLower().Contains("summonerflash"));
+            _ignite = new Spell.Targeted(ObjectManager.Player.GetSpellSlotFromName("summonerdot"), 600);
+            SpellDataInst flash = _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("flash")).Any() ? _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("flash")).First() : null;
+            if (flash != null)
+            {
+                Flash = new Spell.Skillshot(flash.Slot, 425, SkillShotType.Linear);
+            }
 
             Chat.Print("Blessed Riven Loaded.", System.Drawing.Color.Brown);
             Menu = MainMenu.AddMenu("Blessed Riven", "BlessedRiven");
@@ -176,6 +180,7 @@ namespace Blessed_Riven
             MiscMenu.Add("useCrystalManaV", new Slider("Mana < %", 65, 0, 100));
 
             DelayMenu = Menu.AddSubMenu("Delay Settings(Humanizer)", "Delay");
+            DelayMenu.Add("useHumanizer", new CheckBox("Use Humanizer?", false));
             DelayMenu.Add("spell1a1b", new Slider("Q1,Q2 Delay(ms)", 261, 100, 400));
             DelayMenu.Add("spell1c", new Slider("Q3 Delay(ms)", 353, 100, 400));
             DelayMenu.Add("spell2", new Slider("W Delay(ms)", 120, 100, 400));
@@ -198,12 +203,11 @@ namespace Blessed_Riven
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
             Drawing.OnEndScene += Drawing_OnEndScene;
-            Game.OnUpdate += OnGameUpdate;
             Obj_AI_Base.OnProcessSpellCast += Obj_AI_Base_OnProcessSpellCast;
             Obj_AI_Base.OnSpellCast += Obj_AI_Base_OnSpellCast;
             Obj_AI_Base.OnPlayAnimation += Obj_AI_Base_OnPlayAnimation;
-            Gapcloser.OnGapcloser += Gapcloser_OnGapCloser;
-            Interrupter.OnInterruptableSpell += Interrupter_OnInterruptableSpell;
+            //Gapcloser.OnGapcloser += Gapcloser_OnGapCloser;
+           // Interrupter.OnInterruptableSpell += Interrupter_OnInterruptableSpell;
             Obj_AI_Base.OnProcessSpellCast += OnProcessSpellCast;
             getDB();
             Game.OnTick += IgniteEvent;
@@ -220,6 +224,7 @@ namespace Blessed_Riven
             }
         }
 
+        
         private static void getDB()
         {
             if (!ShieldMenu["UseShield"].Cast<CheckBox>().CurrentValue) return;
@@ -358,7 +363,7 @@ namespace Blessed_Riven
                 "goldcardlock"
             };
         }
-
+        
         private static void IgniteEvent(EventArgs args)
         {
             if (!_ignite.IsReady() || Player.Instance.IsDead) return;
@@ -390,7 +395,7 @@ namespace Blessed_Riven
                 Core.DelayAction(() => Item.UseItem(3140), 1);
             }
         }
-
+        /*
         private static void Interrupter_OnInterruptableSpell(Obj_AI_Base sender,
             Interrupter.InterruptableSpellEventArgs e)
         {
@@ -410,7 +415,8 @@ namespace Blessed_Riven
 
             }
         }
-
+        */
+        /*
         public static void Gapcloser_OnGapCloser(AIHeroClient sender, Gapcloser.GapcloserEventArgs e)
         {
             try {
@@ -429,17 +435,16 @@ namespace Blessed_Riven
 
             }
         }
-
+        */
         private static void Game_OnTick(EventArgs args)
         {
             var HPpot = MiscMenu["useHP"].Cast<CheckBox>().CurrentValue;
             var HPv = MiscMenu["useHPv"].Cast<Slider>().CurrentValue;
             var t = TargetSelector.GetTarget(Q.Range, DamageType.Magical);
-            var w = TargetSelector.GetTarget(W.Range, DamageType.Physical);
 
-            if (w.IsValidTarget(W.Range) && MiscMenu["AutoW"].Cast<CheckBox>().CurrentValue)
+            if (checkSkin())
             {
-                W.Cast();
+                Player.SetSkinId(SkinId());
             }
 
             if (_Player.HasBuffOfType(BuffType.Stun) || _Player.HasBuffOfType(BuffType.Taunt) || _Player.HasBuffOfType(BuffType.Polymorph) || _Player.HasBuffOfType(BuffType.Frenzy) || _Player.HasBuffOfType(BuffType.Fear) || _Player.HasBuffOfType(BuffType.Snare) || _Player.HasBuffOfType(BuffType.Suppression))
@@ -517,7 +522,7 @@ namespace Blessed_Riven
             }
             if (ComboMenu["FlashBurst"].Cast<KeyBind>().CurrentValue)
             {
-                Burst();
+                //Burst();
                 if (TargetSelector.SelectedTarget == null)
                 {
                     Orbwalker.OrbwalkTo(Game.CursorPos);
@@ -531,12 +536,20 @@ namespace Blessed_Riven
                     Orbwalker.OrbwalkTo(Game.CursorPos);
                 }
             }
+            Auto();
         }
 
-
+        private static void Auto()
+        {
+            var w = TargetSelector.GetTarget(W.Range, DamageType.Physical);
+            if (w.IsValidTarget(W.Range) && MiscMenu["AutoW"].Cast<CheckBox>().CurrentValue)
+            {
+                W.Cast();
+            }
+        }
+/*
         private static void Burst()
         {
-
             if (Orbwalker.IsAutoAttacking) return;
             var target = TargetSelector.SelectedTarget;
             if (target == null || !target.IsValidTarget()) return;
@@ -570,7 +583,7 @@ namespace Blessed_Riven
                     R.Cast(target);
                     Player.CastSpell(SpellSlot.W);
                 }
-                else if (Flash.IsReady && Q.IsReady() && W.IsReady() && E.IsReady()
+                else if (Flash.IsReady() && Q.IsReady() && W.IsReady() && E.IsReady()
                          && R.IsReady() && R.Name == "RivenFengShuiEngine" && (_Player.Distance(target.Position) <= 800) &&
                          ((Item.HasItem(3074) && Item.CanUseItem(3074))))
 
@@ -587,8 +600,7 @@ namespace Blessed_Riven
                     Player.CastSpell(SpellSlot.Q, target.Position);
 
                 }
-                else if (Flash.IsReady
-                         && R.IsReady() && E.IsReady() && W.IsReady() && Q.IsReady() && R.Name == "RivenFengShuiEngine" &&
+                else if (Flash.IsReady() && R.IsReady() && E.IsReady() && W.IsReady() && Q.IsReady() && R.Name == "RivenFengShuiEngine" &&
                          (_Player.Distance(target.Position) <= 800) && Item.HasItem(3074) && Item.CanUseItem(3074))
                 {
                     Player.CastSpell(SpellSlot.E, target.Position);
@@ -604,14 +616,14 @@ namespace Blessed_Riven
                 }
             }
         }
-
+        */
         private static void FlashQ()
         {
             var target = TargetSelector.SelectedTarget;
             if (target != null && target.IsValidTarget() && !target.IsZombie)
             {
                 Player.CastSpell(SpellSlot.Q, target.Position);
-                Core.DelayAction(() => _Player.Spellbook.CastSpell(Flash.Slot, target.Position), 1);
+                Flash.Cast(target);
             }
         }
 
@@ -621,10 +633,10 @@ namespace Blessed_Riven
             Orbwalker.OrbwalkTo(target.ServerPosition);
             if (target != null && target.Distance(_Player) < 425 + E.Range)
             {
-                if (W.IsReady() && E.IsReady() && Flash.IsReady)
+                if (W.IsReady() && E.IsReady() && Flash.IsReady())
                 {
                     Player.CastSpell(SpellSlot.E, target.Position);
-                    _Player.Spellbook.CastSpell(Flash.Slot, target.Position);
+                    Flash.Cast(target);
                     Player.CastSpell(SpellSlot.W);
                 }
                 else
@@ -640,7 +652,7 @@ namespace Blessed_Riven
             if (target != null && target.IsValidTarget() && !target.IsZombie)
             {
                 Player.CastSpell(SpellSlot.W);
-                Core.DelayAction(() => _Player.Spellbook.CastSpell(Flash.Slot, target.Position), 1);
+                Flash.Cast(target);
             }
         }
 
@@ -726,27 +738,72 @@ namespace Blessed_Riven
             switch (args.Animation)
             {
                 case "Spell1a":
-                    t = DelayMenu["spell1a1b"].Cast<Slider>().CurrentValue;
-                    QCount = 1;
+                    if (DelayMenu["useHumanizer"].Cast<CheckBox>().CurrentValue)
+                    {
+                        t = DelayMenu["spell1a1b"].Cast<Slider>().CurrentValue;
+                        QCount = 1;
+                    }
+                    else
+                    {
+                        t = 241;
+                        QCount = 1;
+                    }                                
                     break;
                 case "Spell1b":
-                    t = DelayMenu["spell1a1b"].Cast<Slider>().CurrentValue;
-                    QCount = 2;
+                    if (DelayMenu["useHumanizer"].Cast<CheckBox>().CurrentValue)
+                    {
+                        t = DelayMenu["spell1a1b"].Cast<Slider>().CurrentValue;
+                        QCount = 2;
+                    }
+                    else
+                    {
+                        t = 241;
+                        QCount = 2;
+                    }
                     break;
                 case "Spell1c":
-                    t = DelayMenu["spell1c"].Cast<Slider>().CurrentValue;
-                    QCount = 0;
+                    if (DelayMenu["useHumanizer"].Cast<CheckBox>().CurrentValue)
+                    {
+                        t = DelayMenu["spell1c"].Cast<Slider>().CurrentValue;
+                        QCount = 0;
+                    }
+                    else
+                    {
+                        t = 333;
+                        QCount = 0;
+                    }
                     break;
                 case "Spell2":
-                    t = DelayMenu["spell2"].Cast<Slider>().CurrentValue;
+                    if (DelayMenu["useHumanizer"].Cast<CheckBox>().CurrentValue)
+                    {
+                        t = DelayMenu["spell2"].Cast<Slider>().CurrentValue;
+                    }
+                    else
+                    {
+                        t = 110;
+                    }
                     break;
                 case "Spell3":
                     break;
                 case "Spell4a":
-                    t = DelayMenu["spell4a"].Cast<Slider>().CurrentValue;
+                    if (DelayMenu["useHumanizer"].Cast<CheckBox>().CurrentValue)
+                    {
+                        t = DelayMenu["spell4a"].Cast<Slider>().CurrentValue;
+                    }
+                    else
+                    {
+                        t = 0;
+                    }
                     break;
                 case "Spell4b":
-                    t = DelayMenu["spell4b"].Cast<Slider>().CurrentValue;
+                    if (DelayMenu["useHumanizer"].Cast<CheckBox>().CurrentValue)
+                    {
+                        t = DelayMenu["spell4b"].Cast<Slider>().CurrentValue;
+                    }
+                    else
+                    {
+                        t = 100;
+                    }
                     break;
             }
             if (t != 0 && ((Orbwalker.ActiveModesFlags != Orbwalker.ActiveModes.None) || ComboMenu["FlashBurst"].Cast<KeyBind>().CurrentValue))
@@ -1194,14 +1251,6 @@ namespace Blessed_Riven
             finally
             {
 
-            }
-        }
-
-        private static void OnGameUpdate(EventArgs args)
-        {
-            if (checkSkin())
-            {
-                Player.SetSkinId(SkinId());
             }
         }
 

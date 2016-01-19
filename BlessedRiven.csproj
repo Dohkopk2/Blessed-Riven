@@ -37,6 +37,9 @@
     <Reference Include="EloBuddy">
       <HintPath>C:\Users\Mertss\AppData\Roaming\EloBuddy\Addons\Libraries\EloBuddy.dll</HintPath>
     </Reference>
+    <Reference Include="EloBuddy.Networking">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\EloBuddy\System\EloBuddy.Networking.dll</HintPath>
+    </Reference>
     <Reference Include="EloBuddy.SDK">
       <HintPath>C:\Users\Mertss\AppData\Roaming\EloBuddy\Addons\Libraries\EloBuddy.SDK.dll</HintPath>
     </Reference>
