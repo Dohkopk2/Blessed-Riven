@@ -7,8 +7,8 @@
     <ProjectGuid>{EC91992E-F8E1-4C9D-A967-47A7B6BE5D6B}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Perfect_Jax</RootNamespace>
-    <AssemblyName>Perfect_Jax</AssemblyName>
+    <RootNamespace>BlessedRiven</RootNamespace>
+    <AssemblyName>BlessedRiven</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <PlatformTarget>x86</PlatformTarget>

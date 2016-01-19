@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 using System.Linq;
 using System.Collections.Generic;
 using EloBuddy;
@@ -49,21 +48,17 @@ namespace Blessed_Riven
         private static SpellDataInst Flash;
         private static Spell.Targeted _ignite;
 
-
-
         static void Main(string[] args)
         {
             Loading.OnLoadingComplete += Loading_OnLoadingComplete;
 
         }
-
         public static AIHeroClient _Player
         {
             get { return ObjectManager.Player; }
 
 
         }
-
         private static string Smitetype
         {
             get
@@ -83,23 +78,24 @@ namespace Blessed_Riven
                 return "summonersmite";
             }
         }
-
         private static void Loading_OnLoadingComplete(EventArgs args)
         {
             if (Player.Instance.ChampionName != "Riven")
                 return;
+
             Bootstrap.Init(null);
+
             SpellDataInst smite = _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).Any() ? _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).First() : null;
             if (smite != null)
             {
                 Smite = new Spell.Targeted(smite.Slot, 500);
             }
             Healthpot = new Item(2003, 0);
-            _ignite = new Spell.Targeted(ObjectManager.Player.GetSpellSlotFromName("summonerdot"), 600);
-            Menu = MainMenu.AddMenu("Blessed Riven", "BlessedRiven");
+            _ignite = new Spell.Targeted(ObjectManager.Player.GetSpellSlotFromName("summonerdot"), 600);           
             Flash = ObjectManager.Player.Spellbook.Spells.FirstOrDefault(a => a.Name.ToLower().Contains("summonerflash"));
-            Chat.Print("Blessed Riven Loaded.", System.Drawing.Color.Brown);
 
+            Chat.Print("Blessed Riven Loaded.", System.Drawing.Color.Brown);
+            Menu = MainMenu.AddMenu("Blessed Riven", "BlessedRiven");
             ComboMenu = Menu.AddSubMenu("Combo Settings", "ComboSettings");
             ComboMenu.AddLabel("Combo Settings");
             ComboMenu.Add("QCombo", new CheckBox("Use Q"));
@@ -483,15 +479,16 @@ namespace Blessed_Riven
                         : Game.CursorPos);
                 return;
             }
-
-            if (HPpot && Player.Instance.HealthPercent < HPv)
-            {
-                if (Item.HasItem(Healthpot.Id) && Item.CanUseItem(Healthpot.Id) && !Player.HasBuff("RegenerationPotion"))
+            foreach (AIHeroClient enemy in EntityManager.Heroes.Enemies)
+            {     
+                if (HPpot && Player.Instance.HealthPercent < HPv && _Player.Distance(enemy) < 2000)
                 {
-                    Healthpot.Cast();
+                    if (Item.HasItem(Healthpot.Id) && Item.CanUseItem(Healthpot.Id) && !Player.HasBuff("RegenerationPotion"))
+                    {
+                        Healthpot.Cast();
+                    }
                 }
             }
-
 
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
             {
@@ -691,7 +688,7 @@ namespace Blessed_Riven
                 if (!MiscMenu["Alive.Q"].Cast<CheckBox>().CurrentValue) return;
                 Core.DelayAction(() =>
                 {
-                    if (!Player.Instance.IsRecalling() && QCount < 2)
+                    if (!Player.Instance.IsRecalling() && QCount <= 2)
                     {
                         Player.CastSpell(SpellSlot.Q,
                             Orbwalker.LastTarget != null && Orbwalker.LastAutoAttack - Environment.TickCount < 3000
@@ -1489,16 +1486,16 @@ namespace Blessed_Riven
         {
             if (DrawMenu["drawCombo"].Cast<CheckBox>().CurrentValue)
             {
-                Drawing.DrawCircle(_Player.Position, Q.Range + E.Range, System.Drawing.Color.Red);
+                Drawing.DrawCircle(_Player.Position, Q.Range + E.Range, Color.Red);
             }
             if (DrawMenu["drawFBurst"].Cast<CheckBox>().CurrentValue)
             {
-                Drawing.DrawCircle(_Player.Position, 425 + E.Range, System.Drawing.Color.Green);
+                Drawing.DrawCircle(_Player.Position, 425 + E.Range, Color.Green);
             }
             if (DrawMenu["drawStatus"].Cast<CheckBox>().CurrentValue)
             {                
                 var pos = Drawing.WorldToScreen(Player.Instance.Position);
-                EloBuddy.Drawing.DrawText((int)pos.X - 45, (int)pos.Y + 40, Color.DarkGray, "Forced R: " + IsRActive);
+                Drawing.DrawText((int)pos.X - 45, (int)pos.Y + 40, Color.DarkGray, "Forced R: " + IsRActive);
             }
         }
 

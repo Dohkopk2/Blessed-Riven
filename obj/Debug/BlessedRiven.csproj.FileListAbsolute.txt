@@ -4,6 +4,14 @@ C:\Users\Mertss\Desktop\buddy\Blessed Riven\obj\Debug\Perfect_Jax.pdb
 C:\Users\Mertss\Desktop\Blessed Riven\bin\Debug\Perfect_Jax.exe.config
 C:\Users\Mertss\Desktop\Blessed Riven\obj\Debug\Perfect_Jax.exe
 C:\Users\Mertss\Desktop\Blessed Riven\obj\Debug\Perfect_Jax.pdb
-C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\Perfect_Jax.exe.config
-C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\obj\Debug\Perfect_Jax.exe
-C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\obj\Debug\Perfect_Jax.pdb
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\EloBuddy.dll
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\EloBuddy.SDK.dll
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\SharpDX.dll
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\SharpDX.Direct3D9.dll
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\Newtonsoft.Json.dll
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\obj\Debug\BlessedRiven.csprojResolveAssemblyReference.cache
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\BlessedRiven.exe.config
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\BlessedRiven.exe
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\bin\Debug\BlessedRiven.pdb
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\obj\Debug\BlessedRiven.exe
+C:\Users\Mertss\Desktop\buddy\My Addons\Blessed Riven\obj\Debug\BlessedRiven.pdb
