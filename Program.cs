@@ -37,6 +37,9 @@ namespace Blessed_Riven
         public static int LastCastQ;
         public static int LastCastW;
         private static int lastwd;
+        private static readonly float _barLength = 104;
+        private static readonly float _xOffset = 2;
+        private static readonly float _yOffset = 9;
         private static bool ssfl;
         public static int QCount;
         public static Menu Menu, FarmingMenu, MiscMenu, DrawMenu, HarassMenu, ComboMenu, Skin, DelayMenu,SmiteMenu;
@@ -257,55 +260,6 @@ namespace Blessed_Riven
             var HPv = MiscMenu["useHPv"].Cast<Slider>().CurrentValue;
             var t = TargetSelector.GetTarget(Q.Range, DamageType.Magical);
 
-            if(_Player.SkinId != Skin["skin.Id"].Cast<Slider>().CurrentValue)
-            {
-                if (checkSkin())
-                {
-                    Player.SetSkinId(SkinId());
-                }
-            }
-
-            if (Smite != null)
-            {
-                if (Smite.IsReady() && SmiteMenu["Use Smite?"].Cast<CheckBox>().CurrentValue)
-                {
-                    Obj_AI_Minion Mob = EntityManager.MinionsAndMonsters.GetJungleMonsters(_Player.Position, Smite.Range).FirstOrDefault();
-
-                    if (Mob != default(Obj_AI_Minion))
-                    {
-                        bool kill = GetSmiteDamage() >= Mob.Health;
-
-                        if (kill)
-                        {
-                            if ((Mob.Name.Contains("SRU_Dragon") || Mob.Name.Contains("SRU_Baron"))) Smite.Cast(Mob);
-                            else if (Mob.Name.StartsWith("SRU_Red") && SmiteMenu["Red?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
-                            else if (Mob.Name.StartsWith("SRU_Blue") && SmiteMenu["Blue?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
-                        }
-                    }
-                }
-            }
-
-            if (_Player.HasBuffOfType(BuffType.Stun) || _Player.HasBuffOfType(BuffType.Taunt) || _Player.HasBuffOfType(BuffType.Polymorph) || _Player.HasBuffOfType(BuffType.Frenzy) || _Player.HasBuffOfType(BuffType.Fear) || _Player.HasBuffOfType(BuffType.Snare) || _Player.HasBuffOfType(BuffType.Suppression))
-            {
-                DoQSS();
-            }
-
-
-            if (MiscMenu["AutoIgnite"].Cast<CheckBox>().CurrentValue)
-            {
-                if (!_ignite.IsReady() || Player.Instance.IsDead) return;
-                foreach (
-                    var source in
-                        EntityManager.Heroes.Enemies
-                            .Where(
-                                a => a.IsValidTarget(_ignite.Range) &&
-                                    a.Health < 50 + 20 * Player.Instance.Level - (a.HPRegenRate / 5 * 3)))
-                {
-                    _ignite.Cast(source);
-                    return;
-                }
-            }
-
             if (LastCastQ + 3600 < Environment.TickCount)
             {
                 QCount = 0;
@@ -354,23 +308,31 @@ namespace Blessed_Riven
             {
                 Flee();
             }
-            if (ComboMenu["FlashBurst"].Cast<KeyBind>().CurrentValue)
-            {
-                //Burst();
-                if (TargetSelector.SelectedTarget == null)
-                {
-                    Orbwalker.OrbwalkTo(Game.CursorPos);
-                }
-            }
-            if (ComboMenu["FlashW"].Cast<KeyBind>().CurrentValue)
-            {
-                //FlashWReal();
-                if (TargetSelector.SelectedTarget == null)
-                {
-                    Orbwalker.OrbwalkTo(Game.CursorPos);
-                }
-            }
             Auto();
+            Smitecast();
+        }
+
+        private static void Smitecast()
+        {
+            if (Smite != null)
+            {
+                if (Smite.IsReady() && SmiteMenu["Use Smite?"].Cast<CheckBox>().CurrentValue)
+                {
+                    Obj_AI_Minion Mob = EntityManager.MinionsAndMonsters.GetJungleMonsters(_Player.Position, Smite.Range).FirstOrDefault();
+
+                    if (Mob != default(Obj_AI_Minion))
+                    {
+                        bool kill = Damage.GetSmiteDamage() >= Mob.Health;
+
+                        if (kill)
+                        {
+                            if ((Mob.Name.Contains("SRU_Dragon") || Mob.Name.Contains("SRU_Baron"))) Smite.Cast(Mob);
+                            else if (Mob.Name.StartsWith("SRU_Red") && SmiteMenu["Red?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
+                            else if (Mob.Name.StartsWith("SRU_Blue") && SmiteMenu["Blue?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
+                        }
+                    }
+                }
+            }
         }
 
         private static void Auto()
@@ -380,77 +342,32 @@ namespace Blessed_Riven
             {
                 W.Cast();
             }
-        }
-        /*
-        private static void Burst()
-        {
-            if (Orbwalker.IsAutoAttacking) return;
-            var target = TargetSelector.SelectedTarget;
-            if (target == null || !target.IsValidTarget()) return;
-            Orbwalker.ForcedTarget = target;
-            Orbwalker.OrbwalkTo(target.ServerPosition);
-            if (target.IsValidTarget() && !target.IsZombie)
+            if (_Player.HasBuffOfType(BuffType.Stun) || _Player.HasBuffOfType(BuffType.Taunt) || _Player.HasBuffOfType(BuffType.Polymorph) || _Player.HasBuffOfType(BuffType.Frenzy) || _Player.HasBuffOfType(BuffType.Fear) || _Player.HasBuffOfType(BuffType.Snare) || _Player.HasBuffOfType(BuffType.Suppression))
             {
-                if (R.IsReady() && R.Name == "RivenFengShuiEngine" && W.IsReady() && E.IsReady() && Q.IsReady() &&
-                    _Player.Distance(target.Position) <= 250 + 70 + _Player.AttackRange && QCount == 2)
+                DoQSS();
+            }
+            if (MiscMenu["AutoIgnite"].Cast<CheckBox>().CurrentValue)
+            {
+                if (!_ignite.IsReady() || Player.Instance.IsDead) return;
+                foreach (
+                    var source in
+                        EntityManager.Heroes.Enemies
+                            .Where(
+                                a => a.IsValidTarget(_ignite.Range) &&
+                                    a.Health < 50 + 20 * Player.Instance.Level - (a.HPRegenRate / 5 * 3)))
                 {
-                    Player.CastSpell(SpellSlot.E, target.Position);
-                    Player.CastSpell(SpellSlot.R);
-                    Player.CastSpell(SpellSlot.Q, target.Position);
-                    if (Item.HasItem(3074) && Item.CanUseItem(3074))
-                    {
-                        Item.UseItem(3074);
-                    }
-                    R.Cast(target);
-                    Player.CastSpell(SpellSlot.W);
+                    _ignite.Cast(source);
+                    return;
                 }
-                else if (R.IsReady() && R.Name == "RivenFengShuiEngine" && E.IsReady() && W.IsReady() && Q.IsReady() &&
-                         _Player.Distance(target.Position) <= 400 + 70 + _Player.AttackRange)
+            }
+            if (_Player.SkinId != Skin["skin.Id"].Cast<Slider>().CurrentValue)
+            {
+                if (checkSkin())
                 {
-                    Player.CastSpell(SpellSlot.E, target.Position);
-                    Player.CastSpell(SpellSlot.R);
-                    Player.CastSpell(SpellSlot.Q, target.Position);
-                    if (Item.HasItem(3074) && Item.CanUseItem(3074))
-                    {
-                        Item.UseItem(3074);
-                    }
-                    R.Cast(target);
-                    Player.CastSpell(SpellSlot.W);
-                }
-                else if (Flash.IsReady() && Q.IsReady() && W.IsReady() && E.IsReady()
-                         && R.IsReady() && R.Name == "RivenFengShuiEngine" && (_Player.Distance(target.Position) <= 800) &&
-                         ((Item.HasItem(3074) && Item.CanUseItem(3074))))
-
-                {
-                    Player.CastSpell(SpellSlot.E, target.Position);
-                    Player.CastSpell(SpellSlot.R);
-                    Core.DelayAction(FlashQ, 150);
-                    Player.CastSpell(SpellSlot.W);
-                    if (Item.HasItem(3074) && Item.CanUseItem(3074))
-                    {
-                        Item.UseItem(3074);
-                    }
-                    R.Cast(target);
-                    Player.CastSpell(SpellSlot.Q, target.Position);
-
-                }
-                else if (Flash.IsReady() && R.IsReady() && E.IsReady() && W.IsReady() && Q.IsReady() && R.Name == "RivenFengShuiEngine" &&
-                         (_Player.Distance(target.Position) <= 800) && Item.HasItem(3074) && Item.CanUseItem(3074))
-                {
-                    Player.CastSpell(SpellSlot.E, target.Position);
-                    Player.CastSpell(SpellSlot.R);
-                    Core.DelayAction(FlashW, 150);
-                    Player.CastSpell(SpellSlot.W);
-                    if (Item.HasItem(3074) && Item.CanUseItem(3074))
-                    {
-                        Item.UseItem(3074);
-                    }
-                    R.Cast(target);
-                    Player.CastSpell(SpellSlot.Q, target.Position);
+                    Player.SetSkinId(SkinId());
                 }
             }
         }
-        */
         private static void SmiteOnTarget(AIHeroClient t)
         {
             var range = 700f;
@@ -462,47 +379,7 @@ namespace Blessed_Riven
             {
                 _Player.Spellbook.CastSpell(SmiteSlot, t);
             }
-        }
-        /*
-        private static void FlashQ()
-        {
-            var target = TargetSelector.SelectedTarget;
-            if (target != null && target.IsValidTarget() && !target.IsZombie)
-            {
-                Player.CastSpell(SpellSlot.Q, target.Position);
-                Flash.Cast(target);
-            }
-        }
-
-        private static void FlashWReal()
-        {
-            var target = TargetSelector.SelectedTarget;
-            Orbwalker.OrbwalkTo(target.ServerPosition);
-            if (target != null && target.Distance(_Player) < 425 + E.Range)
-            {
-                if (W.IsReady() && E.IsReady() && Flash.IsReady())
-                {
-                    Player.CastSpell(SpellSlot.E, target.Position);
-                    Flash.Cast(target);
-                    Player.CastSpell(SpellSlot.W);
-                }
-                else
-                {
-                    return;
-                }
-            }
-        }
-
-        private static void FlashW()
-        {
-            var target = TargetSelector.SelectedTarget;
-            if (target != null && target.IsValidTarget() && !target.IsZombie)
-            {
-                Player.CastSpell(SpellSlot.W);
-                Flash.Cast(target);
-            }
-        }
-        */
+        }   
         private static void Obj_AI_Base_OnProcessSpellCast(Obj_AI_Base sender, GameObjectProcessSpellCastEventArgs args)
         {
             if (!sender.IsMe) return;
@@ -558,13 +435,6 @@ namespace Blessed_Riven
             }
         }
 
-        private static void ForceW()
-        {
-            return;
-        }
-
-
-
         private static void ForceItem()
         {
             if (Item.HasItem(3074) && Item.CanUseItem(3074))
@@ -593,7 +463,7 @@ namespace Blessed_Riven
                     }
                     else
                     {
-                        t = 241;
+                        t = 251;
                         QCount = 1;
                     }                                
                     break;
@@ -605,7 +475,7 @@ namespace Blessed_Riven
                     }
                     else
                     {
-                        t = 241;
+                        t = 251;
                         QCount = 2;
                     }
                     break;
@@ -617,7 +487,7 @@ namespace Blessed_Riven
                     }
                     else
                     {
-                        t = 333;
+                        t = 343;
                         QCount = 0;
                     }
                     break;
@@ -806,29 +676,6 @@ namespace Blessed_Riven
                 {
                     LaneClearAfterAa(target);
                 }
-            }
-        }
-
-        private static readonly float _barLength = 104;
-        private static readonly float _xOffset = 2;
-        private static readonly float _yOffset = 9;
-        private static void Drawing_OnEndScene(EventArgs args)
-        {
-            if (_Player.IsDead)
-                return;
-            if (!DrawMenu["DrawDamage"].Cast<CheckBox>().CurrentValue) return;
-            foreach (var aiHeroClient in EntityManager.Heroes.Enemies)
-            {
-                if (!aiHeroClient.IsHPBarRendered || !aiHeroClient.VisibleOnScreen) continue;
-                var pos = new Vector2(aiHeroClient.HPBarPosition.X + _xOffset, aiHeroClient.HPBarPosition.Y + _yOffset);
-                var fullbar = (_barLength) * (aiHeroClient.HealthPercent / 100);
-                var damage = (_barLength) *
-                                 ((getComboDamage(aiHeroClient) / aiHeroClient.MaxHealth) > 1
-                                     ? 1
-                                     : (getComboDamage(aiHeroClient) / aiHeroClient.MaxHealth));
-                Line.DrawLine(System.Drawing.Color.Gray, 9f, new Vector2(pos.X, pos.Y),
-                    new Vector2(pos.X + (damage > fullbar ? fullbar : damage), pos.Y));
-                Line.DrawLine(System.Drawing.Color.Black, 9, new Vector2(pos.X + (damage > fullbar ? fullbar : damage) - 2, pos.Y), new Vector2(pos.X + (damage > fullbar ? fullbar : damage) + 2, pos.Y));
             }
         }
 
@@ -1075,7 +922,7 @@ namespace Blessed_Riven
                     ssfl = false;
                     EnableR = true;
                 }
-                else if ((!ComboMenu["RCantKill"].Cast<CheckBox>().CurrentValue && ComboMenu["REnemyCount"].Cast<Slider>().CurrentValue == 0) || ComboMenu["ForcedR"].Cast<KeyBind>().CurrentValue)
+                if (ComboMenu["ForcedR"].Cast<KeyBind>().CurrentValue)
                 {
                     ssfl = false;
                     EnableR = true;
@@ -1114,35 +961,6 @@ namespace Blessed_Riven
         }
         private static void Flee()
         {         
-            /*  
-                if (Environment.TickCount - LastCastQ >= 600)
-                {
-                    Q.Cast(Game.CursorPos);
-                }
-
-                if (E.IsReady())
-                {
-                    if (QCount >= 2 || !Q.IsReady() && !_Player.HasBuff("RivenTriCleave"))
-                    {
-                        if (!NavMesh.GetCollisionFlags(_Player.ServerPosition.Extend(Game.CursorPos, E.Range + 10)).HasFlag(CollisionFlags.Wall))
-                            E.Cast(Game.CursorPos);
-                    }
-                }   
-
-            else
-            {
-                if (Q.IsReady())
-                {
-                    Q.Cast(Game.CursorPos);
-                }
-
-                if (E.IsReady() && Environment.TickCount - LastCastQ >= 250)
-                {
-                    if (!NavMesh.GetCollisionFlags(_Player.ServerPosition.Extend(Game.CursorPos, E.Range)).HasFlag(CollisionFlags.Wall))
-                        E.Cast(Game.CursorPos);
-                }
-            }
-            */
             var x = _Player.Position.Extend(Game.CursorPos, 300);
             if (Q.IsReady() && !_Player.IsDashing()) Player.CastSpell(SpellSlot.Q, Game.CursorPos);
             if (E.IsReady() && !_Player.IsDashing()) Player.CastSpell(SpellSlot.E, x.To3D());
@@ -1237,19 +1055,7 @@ namespace Blessed_Riven
 
         }
 
-            static float GetSmiteDamage()
-        {
-            float damage = new float();
-
-            if (_Player.Level < 10) damage = 360 + (_Player.Level - 1) * 30;
-
-            else if (_Player.Level < 15) damage = 280 + (_Player.Level - 1) * 40;
-
-            else if (_Player.Level < 19) damage = 150 + (_Player.Level - 1) * 50;
-
-            return damage;
-        }
-
+           
         public static void LastHit()
         {
             Orbwalker.ForcedTarget = null;
@@ -1300,6 +1106,31 @@ namespace Blessed_Riven
             {                
                 var pos = Drawing.WorldToScreen(Player.Instance.Position);
                 Drawing.DrawText((int)pos.X - 45, (int)pos.Y + 40, Color.DarkGray, "Forced R: " + IsRActive);
+            }
+        }
+        private static void Drawing_OnEndScene(EventArgs args)
+        {
+            if (_Player.IsDead)
+                return;
+            if (!DrawMenu["DrawDamage"].Cast<CheckBox>().CurrentValue) return;
+            foreach (var aiHeroClient in EntityManager.Heroes.Enemies)
+            {
+                if(aiHeroClient.Distance(_Player) < 1000)
+                {               
+                var pos = new Vector2(aiHeroClient.HPBarPosition.X + _xOffset, aiHeroClient.HPBarPosition.Y + _yOffset);
+                var fullbar = (_barLength) * (aiHeroClient.HealthPercent / 100);
+                var damage = (_barLength) *
+                                 ((getComboDamage(aiHeroClient) / aiHeroClient.MaxHealth) > 1
+                                     ? 1
+                                     : (getComboDamage(aiHeroClient) / aiHeroClient.MaxHealth));
+                Line.DrawLine(Color.Gray, 9f, new Vector2(pos.X, pos.Y),
+                    new Vector2(pos.X + (damage > fullbar ? fullbar : damage), pos.Y));
+                Line.DrawLine(Color.Black, 9, new Vector2(pos.X + (damage > fullbar ? fullbar : damage) - 2, pos.Y), new Vector2(pos.X + (damage > fullbar ? fullbar : damage) + 2, pos.Y));
+                }
+                else
+                {
+                    return;
+                }
             }
         }
 

@@ -73,5 +73,18 @@ namespace Blessed_Riven
                              + 0.6 * Player.Instance.FlatPhysicalDamageMod) *
                             (hpPercent < 25 ? 3 : (((100 - hpPercent) * 2.67) / 100) + 1));
         }
+        public static float GetSmiteDamage()
+        {
+            float damage = new float();
+
+            if (Program._Player.Level < 10) damage = 360 + (Program._Player.Level - 1) * 30;
+
+            else if (Program._Player.Level < 15) damage = 280 + (Program._Player.Level - 1) * 40;
+
+            else if (Program._Player.Level < 19) damage = 150 + (Program._Player.Level - 1) * 50;
+
+            return damage;
+        }
+
     }
 }
