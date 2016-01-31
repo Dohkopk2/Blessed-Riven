@@ -463,7 +463,7 @@ namespace Blessed_Riven
                     }
                     else
                     {
-                        t = 251;
+                        t = 221;
                         QCount = 1;
                     }                                
                     break;
@@ -475,7 +475,7 @@ namespace Blessed_Riven
                     }
                     else
                     {
-                        t = 251;
+                        t = 221;
                         QCount = 2;
                     }
                     break;
@@ -487,7 +487,7 @@ namespace Blessed_Riven
                     }
                     else
                     {
-                        t = 343;
+                        t = 303;
                         QCount = 0;
                     }
                     break;
