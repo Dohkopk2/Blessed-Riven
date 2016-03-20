@@ -86,12 +86,6 @@ namespace Blessed_Riven
         {
             if (Player.Instance.ChampionName != "Riven") return;
 
-
-            SpellDataInst smite = _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).Any() ? _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).First() : null;
-            if (smite != null)
-            {
-                Smite = new Spell.Targeted(smite.Slot, 500);
-            }
             Healthpot = new Item(2003, 0);
             _ignite = new Spell.Targeted(ObjectManager.Player.GetSpellSlotFromName("summonerdot"), 600);
 
@@ -144,19 +138,6 @@ namespace Blessed_Riven
             FarmingMenu.Add("Wlasthit", new CheckBox("Use W LastHit"));
             FarmingMenu.Add("Elasthit", new CheckBox("Use E LastHit"));
 
-            SetSmiteSlot();
-            if (SmiteSlot != SpellSlot.Unknown)
-            {
-                SmiteMenu = Menu.AddSubMenu("Smite Usage", "SmiteUsage");
-                SmiteMenu.Add("SmiteEnemy", new CheckBox("Use Smite Combo for Enemy!"));
-                SmiteMenu.AddLabel("Smite Usage");
-                SmiteMenu.Add("Use Smite?", new CheckBox("Use Smite"));
-                SmiteMenu.Add("Red?", new CheckBox("Red"));
-                SmiteMenu.Add("Blue?", new CheckBox("Blue"));
-                SmiteMenu.Add("Dragon?", new CheckBox("Dragon"));
-                SmiteMenu.Add("Baron?", new CheckBox("Baron"));
-            }
-
             MiscMenu = Menu.AddSubMenu("More Settings", "Misc");
             MiscMenu.AddLabel("Auto");
             MiscMenu.Add("UseShield", new CheckBox("Use Shield(E)"));
@@ -166,9 +147,6 @@ namespace Blessed_Riven
             MiscMenu.AddLabel("Keep Alive Settings");
             MiscMenu.Add("Alive.Q", new CheckBox("Keep Q Alive"));
             MiscMenu.Add("Alive.R", new CheckBox("Use R2 Before Expire"));
-            MiscMenu.AddLabel("Extra");
-            MiscMenu.Add("interrupter", new CheckBox("Use Interruptable Spells"));
-            MiscMenu.Add("gapcloser", new CheckBox("Use Gapclose Spells"));
             MiscMenu.AddLabel("Activator");
             MiscMenu.Add("useHP", new CheckBox("Use Health Potion"));
             MiscMenu.Add("useHPV", new Slider("HP < %", 45, 0, 100));
@@ -202,19 +180,6 @@ namespace Blessed_Riven
             Obj_AI_Base.OnProcessSpellCast += Obj_AI_Base_OnProcessSpellCast;
             Obj_AI_Base.OnSpellCast += Obj_AI_Base_OnSpellCast;
             Obj_AI_Base.OnPlayAnimation += Obj_AI_Base_OnPlayAnimation;
-            Gapcloser.OnGapcloser += Gapcloser_OnGapCloser;
-            Interrupter.OnInterruptableSpell += Interrupter_OnInterruptableSpell;
-        }
-
-        private static void SetSmiteSlot()
-        {
-            foreach (
-                var spell in
-                    _Player.Spellbook.Spells.Where(
-                        spell => string.Equals(spell.Name, Smitetype, StringComparison.CurrentCultureIgnoreCase)))
-            {
-                SmiteSlot = spell.Slot;
-            }
         }
 
         private static void DoQSS()
@@ -232,33 +197,11 @@ namespace Blessed_Riven
             }
         }
         
-        private static void Interrupter_OnInterruptableSpell(Obj_AI_Base sender,
-            Interrupter.InterruptableSpellEventArgs e)
-        {
-            
-                if (MiscMenu["interrupter"].Cast<CheckBox>().CurrentValue && sender.IsEnemy &&
-                    e.DangerLevel >= DangerLevel.Medium && sender.IsValidTarget(900))
-                {
-                Player.CastSpell(SpellSlot.E, Game.CursorPos);
-            }
-               
-        }
-        
-        
-        public static void Gapcloser_OnGapCloser(AIHeroClient sender, Gapcloser.GapcloserEventArgs e)
-        {             
-                if (MiscMenu["gapcloser"].Cast<CheckBox>().CurrentValue && sender.IsEnemy &&
-                    sender.IsValidTarget(900))
-                {
-                Player.CastSpell(SpellSlot.E, Game.CursorPos);
-            }          
-        }
-        
         private static void Game_OnTick(EventArgs args)
         {
             var HPpot = MiscMenu["useHP"].Cast<CheckBox>().CurrentValue;
             var HPv = MiscMenu["useHPv"].Cast<Slider>().CurrentValue;
-            var t = TargetSelector.GetTarget(Q.Range, DamageType.Magical);
+            var t = TargetSelector.GetTarget(Smite.Range, DamageType.Magical);
 
             if (LastCastQ + 3600 < Environment.TickCount)
             {
@@ -286,7 +229,6 @@ namespace Blessed_Riven
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Combo))
             {
                 Combo();
-                SmiteOnTarget(t);
             }
             if (Orbwalker.ActiveModesFlags.HasFlag(Orbwalker.ActiveModes.Harass))
             {
@@ -309,30 +251,6 @@ namespace Blessed_Riven
                 Flee();
             }
             Auto();
-            Smitecast();
-        }
-
-        private static void Smitecast()
-        {
-            if (Smite != null)
-            {
-                if (Smite.IsReady() && SmiteMenu["Use Smite?"].Cast<CheckBox>().CurrentValue)
-                {
-                    Obj_AI_Minion Mob = EntityManager.MinionsAndMonsters.GetJungleMonsters(_Player.Position, Smite.Range).FirstOrDefault();
-
-                    if (Mob != default(Obj_AI_Minion))
-                    {
-                        bool kill = Damage.GetSmiteDamage() >= Mob.Health;
-
-                        if (kill)
-                        {
-                            if ((Mob.Name.Contains("SRU_Dragon") || Mob.Name.Contains("SRU_Baron"))) Smite.Cast(Mob);
-                            else if (Mob.Name.StartsWith("SRU_Red") && SmiteMenu["Red?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
-                            else if (Mob.Name.StartsWith("SRU_Blue") && SmiteMenu["Blue?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
-                        }
-                    }
-                }
-            }
         }
 
         private static void Auto()
@@ -368,18 +286,7 @@ namespace Blessed_Riven
                 }
             }
         }
-        private static void SmiteOnTarget(AIHeroClient t)
-        {
-            var range = 700f;
-            var use = SmiteMenu["SmiteEnemy"].Cast<CheckBox>().CurrentValue;
-            var itemCheck = SmiteBlue.Any(i => Item.HasItem(i)) || SmiteRed.Any(i => Item.HasItem(i));
-            if (itemCheck && use &&
-                _Player.Spellbook.CanUseSpell(SmiteSlot) == SpellState.Ready &&
-                t.Distance(_Player.Position) < range)
-            {
-                _Player.Spellbook.CastSpell(SmiteSlot, t);
-            }
-        }   
+  
         private static void Obj_AI_Base_OnProcessSpellCast(Obj_AI_Base sender, GameObjectProcessSpellCastEventArgs args)
         {
             if (!sender.IsMe) return;
